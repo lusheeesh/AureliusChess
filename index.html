@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0c10">
+<title>AURELIUS — Every move, golden.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='82' font-size='88' fill='%23d4af37'%3E%E2%99%9B%3C/text%3E%3C/svg%3E">
+</head>
+<body data-theme="gold">
+
+<header class="topbar">
+  <div class="brand" data-view="home">
+    <span class="brand-mark">♛</span>
+    <span class="brand-name">AURELIUS</span>
+  </div>
+  <div class="top-right">
+    <div class="user-chip" id="userChip" data-view="profile">
+      <span class="uc-avatar" id="ucAvatar">♞</span>
+      <span class="uc-name" id="ucName">Guest</span>
+      <span class="uc-rating" id="ucRating">1200</span>
+    </div>
+    <button class="icon-btn" data-view="settings" aria-label="Settings">⚙</button>
+  </div>
+</header>
+
+<main>
+
+<!-- ================= HOME ================= -->
+<section class="view active" id="view-home">
+  <div class="hero">
+    <h1>Every move, <span class="gold">golden</span>.</h1>
+    <p>Play, learn and watch the royal game — engineered for your phone.</p>
+  </div>
+
+  <div class="quick-opts">
+    <label class="opt"><span>Level</span>
+      <select id="selLevel">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+    </label>
+    <label class="opt"><span>Time</span>
+      <select id="selTC">
+        <option value="0|0">Casual</option>
+        <option value="60000|0">Bullet 1+0</option>
+        <option value="180000|0">Blitz 3+0</option>
+        <option value="300000|3000" selected>Blitz 5+3</option>
+        <option value="600000|0">Rapid 10+0</option>
+        <option value="900000|10000">Rapid 15+10</option>
+      </select>
+    </label>
+    <label class="opt"><span>Rated</span>
+      <input type="checkbox" id="chkRated" checked>
+    </label>
+  </div>
+
+  <div class="cards">
+    <button class="card" id="btnAI"><span class="ci">🤖</span><b>Play Computer</b><small>Train against Aurelius</small></button>
+    <button class="card" id="btnLocal"><span class="ci">👥</span><b>Pass &amp; Play</b><small>Two players, one device</small></button>
+    <button class="card" id="btnCreate"><span class="ci">➕</span><b>Create Room</b><small>Invite with a code</small></button>
+    <button class="card" id="btnQuick"><span class="ci">⚡</span><b>Quick Match</b><small>Find an opponent</small></button>
+    <button class="card" id="btnWatch"><span class="ci">👁</span><b>Spectate</b><small>Watch live games</small></button>
+    <button class="card" id="btnPuzzlesHome"><span class="ci">🧩</span><b>Puzzles</b><small>Sharpen your tactics</small></button>
+  </div>
+
+  <div class="join-row">
+    <input id="inpCode" placeholder="Enter room code" maxlength="8" autocomplete="off" autocapitalize="characters">
+    <button class="btn" id="btnJoin">Join</button>
+  </div>
+
+  <div class="stats-strip" id="homeStats"></div>
+  <div class="offline-note hidden" id="offlineNote">Online features are offline — add your Supabase keys in <code>app.js</code> to enable multiplayer, ratings and spectating.</div>
+</section>
+
+<!-- ================= GAME ================= -->
+<section class="view" id="view-game">
+  <div class="game-layout">
+    <div class="board-area">
+      <div class="pcard" id="pcTop">
+        <span class="pav" id="avTop">♟</span>
+        <div class="pmeta"><span class="pname" id="nameTop">Opponent</span><span class="prate" id="rateTop"></span></div>
+        <span class="pcap" id="capTop"></span>
+        <span class="pclock" id="clockTop">--:--</span>
+      </div>
+      <div class="board-wrap">
+        <div class="board" id="board"></div>
+        <div class="promo hidden" id="promo"></div>
+        <div class="board-over hidden" id="boardOver"></div>
+      </div>
+      <div class="pcard" id="pcBot">
+        <span class="pav" id="avBot">♞</span>
+        <div class="pmeta"><span class="pname" id="nameBot">You</span><span class="prate" id="rateBot"></span></div>
+        <span class="pcap" id="capBot"></span>
+        <span class="pclock" id="clockBot">--:--</span>
+      </div>
+      <div class="evalbar hidden" id="evalBar"><div class="evalfill" id="evalFill"></div></div>
+    </div>
+
+    <aside class="side">
+      <div class="tabs">
+        <button class="tab active" data-tab="moves">Moves</button>
+        <button class="tab" data-tab="chat">Chat</button>
+      </div>
+      <div class="tabpane" id="paneMoves">
+        <div class="status" id="statusLine">White to move</div>
+        <ol class="moves" id="moveList"></ol>
+      </div>
+      <div class="tabpane hidden" id="paneChat">
+        <div class="chatlog" id="chatLog"></div>
+        <form class="chatform" id="chatForm">
+          <input id="chatInput" maxlength="200" placeholder="Message…" autocomplete="off">
+          <button type="submit" class="btn sm">Send</button>
+        </form>
+      </div>
+      <div class="actions">
+        <button class="btn sm" id="btnHint">Hint</button>
+        <button class="btn sm" id="btnUndo">Undo</button>
+        <button class="btn sm" id="btnFlip">Flip</button>
+        <button class="btn sm" id="btnDraw">Draw</button>
+        <button class="btn sm danger" id="btnResign">Resign</button>
+        <button class="btn sm" id="btnAnalyze" disabled>Analyze</button>
+        <button class="btn sm hidden" id="btnRematch">Rematch</button>
+        <button class="btn sm" id="btnExit">Exit</button>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ================= LOBBY ================= -->
+<section class="view" id="view-lobby">
+  <div class="lobby-head">
+    <h2>Live Games</h2>
+    <button class="btn sm ghost" id="btnRefreshLobby">↻ Refresh</button>
+  </div>
+  <div id="lobbyList" class="lobby-list"><p class="muted">Loading…</p></div>
+</section>
+
+<!-- ================= PUZZLES ================= -->
+<section class="view" id="view-puzzles">
+  <div class="puz-head">
+    <h2>Tactics</h2>
+    <div class="puz-streak">Streak <b id="puzStreak">0</b></div>
+  </div>
+  <div class="board-wrap"><div class="board" id="puzBoard"></div></div>
+  <div class="puz-info">
+    <div id="puzStatus" class="status">White to move — mate in 1</div>
+    <div class="puz-actions">
+      <button class="btn sm" id="btnPuzHint">Hint</button>
+      <button class="btn sm" id="btnPuzNext">Next Puzzle</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ANALYZE ================= -->
+<section class="view" id="view-analyze">
+  <div class="an-layout">
+    <div class="board-wrap"><div class="board" id="anBoard"></div></div>
+    <div class="an-side">
+      <div class="an-title">Game Analysis</div>
+      <canvas id="evalGraph" height="90"></canvas>
+      <div class="an-eval" id="anEval">0.00</div>
+      <div class="an-best" id="anBest">—</div>
+      <div class="an-controls">
+        <button class="btn sm" id="anStart">⏮</button>
+        <button class="btn sm" id="anPrev">◀</button>
+        <button class="btn sm" id="anNext">▶</button>
+        <button class="btn sm" id="anEnd">⏭</button>
+      </div>
+      <ol class="moves" id="anMoves"></ol>
+      <button class="btn sm" id="anCopy">Copy PGN</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= RANK ================= -->
+<section class="view" id="view-rank">
+  <h2>Leaderboard</h2>
+  <div id="rankList" class="rank-list"><p class="muted">Loading…</p></div>
+</section>
+
+<!-- ================= PROFILE ================= -->
+<section class="view" id="view-profile">
+  <div class="profile-head">
+    <span class="big-avatar" id="profAvatar">♞</span>
+    <div>
+      <h2 id="profName">Guest</h2>
+      <div class="muted" id="profRating">Rating 1200</div>
+    </div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat"><b id="statGames">0</b><span>Games</span></div>
+    <div class="stat"><b id="statWins">0</b><span>Wins</span></div>
+    <div class="stat"><b id="statDraws">0</b><span>Draws</span></div>
+    <div class="stat"><b id="statLosses">0</b><span>Losses</span></div>
+    <div class="stat"><b id="statWinRate">0%</b><span>Win rate</span></div>
+  </div>
+  <h3>Recent Games</h3>
+  <div id="profHistory" class="history"><p class="muted">No games yet.</p></div>
+  <div class="prof-actions">
+    <button class="btn sm" id="btnEditProfile">Edit Profile</button>
+  </div>
+</section>
+
+<!-- ================= SETTINGS ================= -->
+<section class="view" id="view-settings">
+  <h2>Settings</h2>
+  <div class="settings-list">
+    <label class="setting"><span>Board theme</span>
+      <select id="setTheme">
+        <option value="gold">Gold</option>
+        <option value="midnight">Midnight</option>
+        <option value="emerald">Emerald</option>
+        <option value="classic">Classic</option>
+        <option value="rose">Rose</option>
+      </select>
+    </label>
+    <label class="setting"><span>Coordinates</span><input type="checkbox" id="setCoords"></label>
+    <label class="setting"><span>Legal move dots</span><input type="checkbox" id="setLegal"></label>
+    <label class="setting"><span>Sound effects</span><input type="checkbox" id="setSound"></label>
+    <label class="setting"><span>Auto-flip in Pass &amp; Play</span><input type="checkbox" id="setAutoflip"></label>
+    <label class="setting"><span>Show eval bar vs AI</span><input type="checkbox" id="setEval"></label>
+    <button class="btn" id="btnSaveSettings">Save</button>
+  </div>
+</section>
+
+</main>
+
+<nav class="tabbar">
+  <button data-view="home" class="active"><span>♟</span>Play</button>
+  <button data-view="lobby"><span>👁</span>Watch</button>
+  <button data-view="puzzles"><span>🧩</span>Puzzles</button>
+  <button data-view="analyze"><span>📊</span>Analyze</button>
+  <button data-view="profile"><span>♞</span>Profile</button>
+</nav>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
