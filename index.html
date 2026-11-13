@@ -10,6 +10,39 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='82' font-size='88' fill='%23d4af37'%3E%E2%99%9B%3C/text%3E%3C/svg%3E">
+<script>
+/* Inline error display — shows JS errors on screen (mobile-friendly) */
+(function(){
+  function show(msg,color){
+    var d=document.getElementById('__err');
+    if(!d){
+      d=document.createElement('div');
+      d.id='__err';
+      d.style.cssText='position:fixed;top:56px;left:8px;right:8px;background:'+(color||'#e05252')+';color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;z-index:999999;font-family:monospace;white-space:pre-wrap;word-break:break-word;max-height:45vh;overflow:auto;box-shadow:0 4px 20px rgba(0,0,0,.6);line-height:1.4';
+      document.body.appendChild(d);
+    }
+    d.textContent+= (d.textContent?'\n\n':'') + msg;
+  }
+  window.__showErr = show;
+  window.addEventListener('error',function(e){
+    show('❌ '+(e.message||'script error')+'\n@ '+(e.filename?e.filename.split('/').pop():'?')+':'+(e.lineno||'?'));
+  });
+  window.addEventListener('unhandledrejection',function(e){
+    show('❌ Promise: '+((e.reason&&e.reason.message)||e.reason||'unknown'));
+  });
+  document.addEventListener('DOMContentLoaded',function(){
+    setTimeout(function(){
+      if(typeof window.Aurelius==='undefined'){
+        show('⚠️ engine.js did not load. Check the file exists next to index.html.','#f0a500');
+      } else if(!window.Aurelius.BOTS){
+        show('⚠️ engine.js is an OLD version (missing BOTS). Replace engine.js with the latest.','#f0a500');
+      } else if(!document.querySelector('#homeStats .s')){
+        show('⚠️ app.js did not initialise (buttons unbound). Check app.js is loaded.','#f0a500');
+      }
+    },2500);
+  });
+})();
+</script>
 </head>
 <body>
 
@@ -336,7 +369,8 @@
 <div id="toast" class="toast"></div>
 <div id="modal" class="modal hidden"></div>
 
-<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<!-- mqtt is ASYNC — it must never block the app from loading -->
+<script async src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script src="engine.js"></script>
 <script src="app.js"></script>
 </body>
