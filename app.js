@@ -539,7 +539,7 @@ function onPointerDown(e){
   const canDrag=myTurn&&p&&colorOf(p)===G.st.turn;
   const canPremove=!myTurn&&G.mode==='online'&&p&&colorOf(p)===G.myColor;
   if(canDrag||canPremove){
-    drag={kind:'piece',from:i,startX:e.clientX,e.clientY:e.clientY,piece:p,ghost:null,moved:false,premove:canPremove};
+    drag={kind:'piece',from:i,startX:e.clientX,startY:e.clientY,piece:p,ghost:null,moved:false,premove:canPremove};
     document.addEventListener('pointermove',onPointerMove,{passive:false});
     document.addEventListener('pointerup',onPointerUp);
   } else {
