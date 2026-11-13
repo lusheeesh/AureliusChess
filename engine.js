@@ -1,4 +1,4 @@
-/* AURELIUS ENGINE v3 — full chess engine + v3 additions */
+/* AURELIUS ENGINE v3.1 */
 (function (global) {
   'use strict';
 
@@ -27,13 +27,10 @@
       if (ch >= '1' && ch <= '8') i += +ch;
       else board[i++] = ch;
     }
-    return {
-      board, turn: parts[1] || 'w',
+    return { board, turn: parts[1] || 'w',
       castling: (parts[2] && parts[2] !== '-') ? parts[2] : '',
       ep: (parts[3] && parts[3] !== '-') ? nameToSq(parts[3]) : -1,
-      halfmove: +(parts[4] || 0),
-      fullmove: +(parts[5] || 1)
-    };
+      halfmove: +(parts[4] || 0), fullmove: +(parts[5] || 1) };
   }
 
   function toFen(st) {
@@ -190,11 +187,7 @@
 
   function makeMove(st, m) {
     const b = st.board;
-    const undo = {
-      board: b.slice(), turn: st.turn, castling: st.castling,
-      ep: st.ep, halfmove: st.halfmove, fullmove: st.fullmove,
-      captured: null, epCap: -1
-    };
+    const undo = { board: b.slice(), turn: st.turn, castling: st.castling, ep: st.ep, halfmove: st.halfmove, fullmove: st.fullmove, captured: null };
     const p = b[m.from];
     const color = colorOf(p), t = typeOf(p);
     let captured = b[m.to];
@@ -203,7 +196,6 @@
       const capIdx = m.to + (color === 'w' ? 8 : -8);
       captured = b[capIdx];
       b[capIdx] = '';
-      undo.epCap = capIdx;
     }
     b[m.to] = m.promo ? (color === 'w' ? m.promo.toUpperCase() : m.promo) : p;
     b[m.from] = '';
@@ -232,19 +224,13 @@
     st.halfmove = (t === 'p' || captured) ? 0 : st.halfmove + 1;
     if (color === 'b') st.fullmove++;
     st.turn = color === 'w' ? 'b' : 'w';
-
     undo.captured = captured;
-    undo.move = m;
     return undo;
   }
 
   function unmakeMove(st, undo) {
-    st.board = undo.board;
-    st.turn = undo.turn;
-    st.castling = undo.castling;
-    st.ep = undo.ep;
-    st.halfmove = undo.halfmove;
-    st.fullmove = undo.fullmove;
+    st.board = undo.board; st.turn = undo.turn; st.castling = undo.castling;
+    st.ep = undo.ep; st.halfmove = undo.halfmove; st.fullmove = undo.fullmove;
   }
 
   function legalMoves(st) {
@@ -366,7 +352,6 @@
     const st = parseFen(fen);
     const moves = legalMoves(st);
     if (!moves.length) return null;
-
     if (level === 'easy') {
       const scored = moves.map(m => {
         const u = makeMove(st, m);
@@ -377,7 +362,6 @@
       const top = scored.slice(0, Math.min(3, scored.length));
       return top[Math.floor(Math.random() * top.length)].m;
     }
-
     const depth = level === 'hard' ? 4 : 2;
     const deadline = Date.now() + (level === 'hard' ? 1800 : 700);
     let best = null, bestScore = -Infinity;
@@ -426,47 +410,253 @@
       if (!m) break;
       const san = moveToSan(st, m, legal);
       makeMove(st, m);
-      if (whiteToMove) {
-        line += (line ? ' ' : '') + `${num}. ${san}`;
-        num++; whiteToMove = false;
-      } else {
-        line += (line ? ' ' : '') + san;
-        whiteToMove = true;
-        pgn += line + '\n';
-        line = '';
-      }
+      if (whiteToMove) { line += (line ? ' ' : '') + `${num}. ${san}`; num++; whiteToMove = false; }
+      else { line += (line ? ' ' : '') + san; whiteToMove = true; pgn += line + '\n'; line = ''; }
     }
     if (line) pgn += line + '\n';
     return pgn;
   }
 
-  /* ========== V3 ADDITIONS ========== */
-
   function materialFor(st, color) {
     let sum = 0;
     for (const p of st.board) {
-      if (!p) continue;
-      if (colorOf(p) !== color) continue;
+      if (!p || colorOf(p) !== color) continue;
       sum += VAL[typeOf(p)] || 0;
     }
     return sum;
   }
 
+  /* ============ BOTS ============ */
   const BOTS = [
-    {id:'martin',  name:'Martin',      elo:250,  emoji:'🐭', desc:'Beginner. Blunders often.',       depth:1, random:220},
-    {id:'nelson',  name:'Nelson',      elo:1300, emoji:'🎩', desc:'Loves the queen trick.',          depth:2, random:70},
-    {id:'duke',    name:'Duke',        elo:1500, emoji:'⚔️', desc:'Aggressive attacker.',            depth:2, random:55, aggression:1.3},
-    {id:'isabel',  name:'Isabel',      elo:1600, emoji:'👑', desc:'Solid positional player.',        depth:2, random:35},
-    {id:'wally',   name:'Wally',       elo:1800, emoji:'🤡', desc:'Tricky and unpredictable.',       depth:2, random:25},
-    {id:'sven',    name:'Sven',        elo:2000, emoji:'🧔', desc:'Balanced club player.',           depth:3, random:15},
-    {id:'antonia', name:'Antonia',     elo:2200, emoji:'🎭', desc:'Patient and precise.',            depth:3, random:10},
-    {id:'mittens', name:'Mittens',     elo:2500, emoji:'🐱', desc:'The cat. Chaos incarnate.',       depth:3, random:8, aggression:1.2},
-    {id:'witty',   name:'Witty Alien', elo:2600, emoji:'👽', desc:'Out of this world tactics.',      depth:3, random:6},
-    {id:'gotham',  name:'GothamChess', elo:2700, emoji:'🗽', desc:'The Levy. Shows no mercy.',       depth:3, random:4},
-    {id:'hikaru',  name:'Hikaru',      elo:2800, emoji:'⚡', desc:'Blitz speed, bullet brain.',      depth:4, random:2},
-    {id:'magnus',  name:'Magnus',      elo:2850, emoji:'🏆', desc:'The World Champion.',             depth:4, random:0},
-    {id:'stock',   name:'Stockfish',   elo:3200, emoji:'🐟', desc:'The engine. Inhuman.',            depth:5, random:0},
+    {
+      id:'mittens', name:'Mittens', elo:2500, displayElo:1, emoji:'🐱',
+      desc:'Rating says 1. It\'s lying.',
+      depth:3, random:8, aggression:1.3,
+      comments:{
+        start:["Meow. Let's play, human.", "Purr... I smell fish.", "Ready to lose?"],
+        check:["Check. Meow.", "Purr-tect your king."],
+        myCheck:["Check, human. Meow.", "I have you now."],
+        capture:["Yum. That piece was tasty.", "Meow. Got it."],
+        playerCapture:["Ouch, human. That stung.", "Meow. Fine."],
+        win:["Meow. Victory is purr-fect.", "Better luck next time, human."],
+        lose:["Meow... you were good.", "Fine. You win, human."],
+        draw:["A draw. How boring. Meow.", "Neither of us wins. Purr."],
+        mate:["Checkmate. Meow.", "Purr-fect mate."]
+      }
+    },
+    {
+      id:'martin', name:'Martin', elo:250, displayElo:250, emoji:'🐭',
+      desc:'Beginner. Blunders often.',
+      depth:1, random:220,
+      comments:{
+        start:["Hi! I'm Martin!", "Let's have fun!", "I'm still learning!"],
+        check:["Oh no, check!"],
+        myCheck:["Check! I think?", "Did I do that right?"],
+        capture:["Yay, I got a piece!", "Did I do that right?"],
+        playerCapture:["Oof, that hurt!"],
+        win:["I won?! Really?!", "Wow, I won!"],
+        lose:["Good game!", "You're too good!"],
+        draw:["We drew! Fun!"],
+        mate:["I mated you?!", "Wow!"]
+      }
+    },
+    {
+      id:'nelson', name:'Nelson', elo:1300, displayElo:1300, emoji:'🎩',
+      desc:'Loves the early queen attack.',
+      depth:2, random:70, aggression:1.6,
+      comments:{
+        start:["My queen is coming!", "Watch out!", "Prepare yourself!"],
+        check:["The queen strikes!", "Check!"],
+        myCheck:["Queen's got you!", "Check!"],
+        capture:["Gotcha!", "Queen takes!"],
+        playerCapture:["Hey! Not my queen!", "You took a pawn, big deal."],
+        win:["The queen prevails!", "Victory!"],
+        lose:["You got my queen?!", "Noooo!"],
+        draw:["A draw. Fine."],
+        mate:["Queen's mate!", "Checkmate!"]
+      }
+    },
+    {
+      id:'duke', name:'Duke', elo:1500, displayElo:1500, emoji:'⚔️',
+      desc:'Aggressive attacker.',
+      depth:2, random:55, aggression:1.3,
+      comments:{
+        start:["Let's attack!", "To battle!", "Attack, attack, attack!"],
+        check:["Your king is mine!", "Attack!"],
+        myCheck:["Strike!", "Forward!"],
+        capture:["Victory!", "Another piece falls!"],
+        playerCapture:["A setback.", "I'll recover."],
+        win:["Victorious!", "Attack succeeds!"],
+        lose:["Well fought.", "You defended well."],
+        draw:["A stalemate.", "Neither wins."],
+        mate:["Checkmate!", "Victory is mine!"]
+      }
+    },
+    {
+      id:'isabel', name:'Isabel', elo:1600, displayElo:1600, emoji:'👑',
+      desc:'Solid positional player.',
+      depth:2, random:35,
+      comments:{
+        start:["Let's play well.", "Position first.", "Calmly."],
+        check:["Check. Steady.", "Your king is exposed."],
+        myCheck:["Check.", "A small advantage."],
+        capture:["A small gain.", "Material first."],
+        playerCapture:["Hmm.", "I'll adjust."],
+        win:["Position prevailed.", "Good game."],
+        lose:["Well played.", "You earned it."],
+        draw:["A fair draw.", "Balanced game."],
+        mate:["Checkmate.", "The position delivered."]
+      }
+    },
+    {
+      id:'wally', name:'Wally', elo:1800, displayElo:1800, emoji:'🤡',
+      desc:'Tricky and unpredictable.',
+      depth:2, random:25,
+      comments:{
+        start:["Hehehe...", "Let's have some fun!", "Surprise incoming!"],
+        check:["Surprise check!", "Gotcha!"],
+        myCheck:["Prank!", "Unexpected?"],
+        capture:["Hehe!", "Didn't see that coming?"],
+        playerCapture:["Oh, you got me!", "Nice trick!"],
+        win:["Ha! Victory!", "Gotcha!"],
+        lose:["Aww, you beat me!", "Great trick!"],
+        draw:["A draw? Boring!", "Next time!"],
+        mate:["Tricked ya!", "Checkmate!"]
+      }
+    },
+    {
+      id:'sven', name:'Sven', elo:2000, displayElo:2000, emoji:'🧔',
+      desc:'Balanced club player.',
+      depth:3, random:15,
+      comments:{
+        start:["Let's play.", "Good luck.", "Steady game."],
+        check:["Check.", "Mind your king."],
+        myCheck:["Check.", "Progress."],
+        capture:["A trade.", "Good."],
+        playerCapture:["Fine trade.", "Understood."],
+        win:["Good game.", "Well played."],
+        lose:["You played better.", "Good win."],
+        draw:["Fair result.", "Balanced."],
+        mate:["Checkmate.", "Well played."]
+      }
+    },
+    {
+      id:'antonia', name:'Antonia', elo:2200, displayElo:2200, emoji:'🎭',
+      desc:'Patient and precise.',
+      depth:3, random:10,
+      comments:{
+        start:["Patience.", "Positional game.", "Let's think."],
+        check:["A small squeeze.", "Check."],
+        myCheck:["Pressure.", "Progress."],
+        capture:["Material.", "Correct."],
+        playerCapture:["Interesting.", "Noted."],
+        win:["Position delivered.", "Good game."],
+        lose:["Well played. Precise.", "You deserved it."],
+        draw:["Balanced.", "A fair draw."],
+        mate:["Checkmate.", "Precise."]
+      }
+    },
+    {
+      id:'witty', name:'Witty Alien', elo:2600, displayElo:2600, emoji:'👽',
+      desc:'Out of this world tactics.',
+      depth:3, random:6,
+      comments:{
+        start:["Earthling, prepare!", "Take me to your king!", "Zorg approves."],
+        check:["Zap!", "Earthling king in danger!"],
+        myCheck:["Zap zap!", "Check!"],
+        capture:["Beam me that piece!", "Acquired!"],
+        playerCapture:["Impressive, earthling.", "That stings!"]  ,
+        win:["Zorg victorious!", "Earth conquered!"],
+        lose:["You win, earthling.", "Until next time."],
+        draw:["A truce.", "We meet again."],
+        mate:["Checkmate, earthling!", "Zap!"]
+      }
+    },
+    {
+      id:'gotham', name:'GothamChess', elo:2700, displayElo:2700, emoji:'🗽',
+      desc:'The Levy. Shows no mercy.',
+      depth:3, random:4, aggression:1.3,
+      comments:{
+        start:["Let's see what you've got.", "Time for the rook!", "Show me the moves."],
+        check:["That's check!", "Pressure!"],
+        myCheck:["The rook comes!", "Check!"],
+        capture:["And that's a brilliant trade!", "Classic."],
+        playerCapture:["Oh no, don't do that!", "Ouch."],
+        win:["GG, that was clean.", "Not even close."],
+        lose:["OK, you got me.", "Nice moves."],
+        draw:["A draw. Next time."],
+        mate:["Checkmate. That's the rook!", "Done!"]  ,
+        mate:["Checkmate! ROOK!"]
+      }
+    },
+    {
+      id:'fischer', name:'Bobby Fischer', elo:2785, displayElo:2785, emoji:'👤',
+      desc:'11th World Champion. Best by test.',
+      depth:4, random:1, aggression:1.2,
+      comments:{
+        start:["Best by test.", "Let's play chess.", "You should be honored."],
+        check:["Check. Best by test.", "Feel the pressure."],
+        myCheck:["Check.", "As expected."],
+        capture:["Material is material.", "Yes."],
+        playerCapture:["Noted. It won't help.", "A minor setback."],
+        win:["I knew I'd win. Best by test.", "Good game. Predictable."],
+        lose:["Good game. You earned that.", "Best by test... for you."],
+        draw:["A draw. How boring.", "Fine. Even."],
+        mate:["Checkmate. As expected.", "Checkmate. Best by test."]
+      }
+    },
+    {
+      id:'hikaru', name:'Hikaru', elo:2800, displayElo:2800, emoji:'⚡',
+      desc:'Blitz speed, bullet brain.',
+      depth:4, random:2, aggression:1.2,
+      comments:{
+        start:["Let's go!", "Speed chess!", "GG!"],
+        check:["Check!", "Come on!"],
+        myCheck:["Check!", "Pressure!"],
+        capture:["Got it!", "GG!"],
+        playerCapture:["Oh, nice!", "Interesting!"],
+        win:["GG!", "That was fast!"],
+        lose:["GG, well played!", "Respect."],
+        draw:["Draw. GG."],
+        mate:["Checkmate! GG!", "Game!"]
+      }
+    },
+    {
+      id:'magnus', name:'Magnus', elo:2850, displayElo:2850, emoji:'🏆',
+      desc:'The World Champion.',
+      depth:4, random:0,
+      comments:{
+        start:["Let's play.", "Interesting.", "Good luck."],
+        check:["Check.", "Pressure."],
+        myCheck:["Check.", "Progress."],
+        capture:["Material.", "Good."],
+        playerCapture:["Interesting choice.", "Noted."],
+        win:["Good game.", "Well played."],
+        lose:["You were better today.", "Respect."],
+        draw:["A fair draw.", "Balanced."],
+        mate:["Checkmate.", "Well played."]
+      }
+    },
+    {
+      id:'stock', name:'Stockfish', elo:3200, displayElo:3200, emoji:'🐟',
+      desc:'The engine. Inhuman.',
+      depth:5, random:0,
+      comments:{
+        start:["Calculating...", "Engine online.", "..."],
+        check:["+2.34", "Check. Advantage: engine."],
+        myCheck:["+1.87"],
+        capture:["Material: favorable."],
+        playerCapture:["Recalculating."],
+        win:["Game over. Engine wins."],
+        lose:["Resignation impossible. You won."],
+        draw:["Draw. Eval 0.00."],
+        mate:["Mate in N. Found."]
+      }
+    }
   ];
+
+  // Sort by displayElo, keeping Mittens at 1
+  BOTS.sort((a,b) => (a.displayElo||a.elo) - (b.displayElo||b.elo));
 
   const ECO = [
     ['e4',"King's Pawn"],['e4 e5','Open Game'],['e4 e5 Nf3',"King's Knight"],
@@ -523,10 +713,7 @@
       else if (depth === 0) clean += ch;
     }
     const tokens = clean.trim().split(/\s+/).filter(t => t &&
-      !/^\d+\.*$/.test(t) &&
-      !/^(1-0|0-1|1\/2-1\/2|\*)$/.test(t) &&
-      !/^\$\d+$/.test(t)
-    );
+      !/^\d+\.*$/.test(t) && !/^(1-0|0-1|1\/2-1\/2|\*)$/.test(t) && !/^\$\d+$/.test(t));
     const st = parseFen(START_FEN);
     const moves = [];
     for (const san of tokens) {
@@ -557,6 +744,18 @@
     const st = parseFen(fen);
     const moves = legalMoves(st);
     if (!moves.length) return null;
+
+    // Nelson's signature: e4 then Qh5 (when playing white)
+    if (opts && opts.id === 'nelson') {
+      if (st.turn === 'w' && st.fullmove === 1) {
+        const mv = moves.find(m => m.from === 52 && m.to === 36);
+        if (mv) return mv;
+      }
+      if (st.turn === 'w' && st.fullmove === 2) {
+        const mv = moves.find(m => m.from === 59 && m.to === 31);
+        if (mv) return mv;
+      }
+    }
 
     if (depth <= 1 && random > 150 && Math.random() < 0.35) {
       return moves[Math.floor(Math.random() * moves.length)];
@@ -601,8 +800,7 @@
     for (let i = 0; i < n; i++) {
       const legal = legalMoves(st);
       const mv = moves[i];
-      const m = legal.find(x => x.from === mv.from && x.to === mv.to &&
-        (mv.promo ? x.promo === mv.promo : !x.promo));
+      const m = legal.find(x => x.from === mv.from && x.to === mv.to && (mv.promo ? x.promo === mv.promo : !x.promo));
       if (!m) break;
       makeMove(st, m);
     }
@@ -618,37 +816,24 @@
       const mover = stB.turn;
       const legal = legalMoves(stB);
       const played = moves[i];
-      const playedMv = legal.find(x => x.from === played.from && x.to === played.to &&
-        (played.promo ? x.promo === played.promo : !x.promo));
+      const playedMv = legal.find(x => x.from === played.from && x.to === played.to && (played.promo ? x.promo === played.promo : !x.promo));
       if (!playedMv) { out.push({ label: 'good', evalCp: 0 }); continue; }
-
-      if (inBook) {
-        if (!openingName(sans.slice(0, i + 1))) inBook = false;
-      }
-
+      if (inBook && !openingName(sans.slice(0, i + 1))) inBook = false;
       const matBefore = materialFor(stB, mover);
       const stAfter = parseFen(fenBefore);
       makeMove(stAfter, playedMv);
       const playedEval = evalFor(stAfter, mover);
       const matAfter = materialFor(stAfter, mover);
       const sacrificed = matBefore - matAfter;
-
       const best = findBestMoveV2(fenBefore, { depth: 2, random: 0 });
-      let bestEval = playedEval;
-      let playedIsBest = false;
+      let bestEval = playedEval, playedIsBest = false;
       if (best) {
-        playedIsBest = (best.from === played.from && best.to === played.to &&
-          (best.promo || null) === (played.promo || null));
+        playedIsBest = (best.from === played.from && best.to === played.to && (best.promo || null) === (played.promo || null));
         const stBest = parseFen(fenBefore);
-        const bestMv = legal.find(x => x.from === best.from && x.to === best.to &&
-          (best.promo ? x.promo === best.promo : !x.promo));
-        if (bestMv) {
-          makeMove(stBest, bestMv);
-          bestEval = evalFor(stBest, mover);
-        }
+        const bestMv = legal.find(x => x.from === best.from && x.to === best.to && (best.promo ? x.promo === best.promo : !x.promo));
+        if (bestMv) { makeMove(stBest, bestMv); bestEval = evalFor(stBest, mover); }
       }
       const delta = bestEval - playedEval;
-
       let label = 'good';
       if (inBook) label = 'book';
       else if (sacrificed >= 200 && playedEval > -100) label = 'brilliant';
@@ -658,7 +843,6 @@
       else if (delta < 180) label = 'inaccuracy';
       else if (delta < 350) label = 'mistake';
       else label = 'blunder';
-
       out.push({ label, evalCp: playedEval });
     }
     return out;
