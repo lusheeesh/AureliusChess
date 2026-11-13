@@ -34,6 +34,7 @@ h3{font-size:17px;margin:16px 0 10px;color:var(--gold2)}
 @keyframes shine{to{background-position:200% center}}
 .muted{color:var(--muted)}
 .hidden{display:none!important}
+.small{font-size:12px}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;background:none;border:none}
 code{background:var(--panel2);padding:2px 6px;border-radius:6px;font-size:.85em}
@@ -164,6 +165,24 @@ main{padding:14px;max-width:1200px;margin:0 auto}
 
 .drag-ghost{position:fixed;pointer-events:none;z-index:100;font-family:'Segoe UI Symbol','Apple Symbols','Noto Sans Symbols 2',sans-serif;display:flex;align-items:center;justify-content:center;color:#fdfaf2;text-shadow:0 2px 8px rgba(0,0,0,.8);filter:drop-shadow(0 8px 16px rgba(0,0,0,.6));transform:translate(-50%,-50%) scale(1.15)}
 
+.comment-bubble{
+  position:absolute;top:8px;right:8px;max-width:220px;
+  background:linear-gradient(135deg,var(--panel),var(--panel2));
+  border:1px solid var(--gold-dim);border-radius:14px;
+  padding:8px 12px;font-size:12px;line-height:1.4;color:var(--text);
+  z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.5),0 0 0 1px rgba(212,175,55,.15);
+  animation:commentIn .3s cubic-bezier(.2,.9,.3,1.3);
+  pointer-events:none;font-weight:500;
+}
+.comment-bubble::before{
+  content:'';position:absolute;top:-6px;right:24px;width:10px;height:10px;
+  background:var(--panel);border-left:1px solid var(--gold-dim);border-top:1px solid var(--gold-dim);
+  transform:rotate(45deg);
+}
+@keyframes commentIn{from{opacity:0;transform:translateY(8px) scale(.9)}to{opacity:1;transform:none}}
+.comment-bubble.hiding{animation:commentOut .3s ease forwards}
+@keyframes commentOut{to{opacity:0;transform:translateY(-8px)}}
+
 .promo{position:absolute;inset:0;display:grid;place-items:center;background:rgba(5,6,10,.8);z-index:20;border-radius:10px;backdrop-filter:blur(4px)}
 .promo-box{display:flex;gap:8px;background:var(--panel);padding:14px;border-radius:14px;border:1px solid var(--gold-dim);box-shadow:0 20px 60px rgba(0,0,0,.7)}
 .promo-box button{font-size:32px;width:54px;height:54px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);transition:.15s}
@@ -215,14 +234,6 @@ main{padding:14px;max-width:1200px;margin:0 auto}
 .share-row{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--gold-dim);border-radius:12px;padding:8px 10px}
 .share-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
 .share-code{flex:1;font-family:monospace;font-weight:800;letter-spacing:3px;color:var(--gold);font-size:15px}
-
-.focus-btn{position:absolute;top:8px;right:8px;z-index:15;width:36px;height:36px;border-radius:10px;background:rgba(19,22,38,.9);border:1px solid var(--gold-dim);color:var(--gold);font-size:18px;display:grid;place-items:center}
-body.focus-mode .topbar,body.focus-mode .tabbar,body.focus-mode .side,body.focus-mode .site-footer,body.focus-mode .emote-bar{display:none!important}
-body.focus-mode .focus-btn{display:grid!important}
-body.focus-mode main{padding:6px}
-body.focus-mode .board-area{max-width:min(100vw - 12px,100vh - 12px)!important;margin:0 auto}
-body.focus-mode .game-layout{justify-content:center}
-body.focus-mode .pcard{max-width:min(100vw - 12px,100vh - 12px);margin:0 auto}
 
 .lobby-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .lobby-list{display:flex;flex-direction:column;gap:8px}
@@ -330,22 +341,36 @@ body.focus-mode .pcard{max-width:min(100vw - 12px,100vh - 12px);margin:0 auto}
 .toast.error{border-color:var(--danger)}
 
 .modal{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:rgba(5,6,10,.8);backdrop-filter:blur(6px);animation:fade .2s ease;padding:20px}
-.modal-box{background:var(--panel);border:1px solid var(--gold-dim);border-radius:18px;padding:24px;max-width:480px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.7);animation:pop .25s ease;max-height:85vh;overflow-y:auto}
+.modal-box{background:var(--panel);border:1px solid var(--gold-dim);border-radius:18px;padding:20px;max-width:460px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.7);animation:pop .25s ease;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 @keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
-.modal-box h3{color:var(--gold);margin-bottom:12px}
+.modal-box h3{color:var(--gold);margin-bottom:12px;font-size:18px}
 .modal-box input,.modal-box textarea{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 14px;outline:none;margin-bottom:12px;font-size:14px}
 .modal-box input:focus,.modal-box textarea:focus{border-color:var(--gold-dim)}
 .modal-box textarea{font-family:monospace;font-size:12px;min-height:120px;resize:vertical}
 .modal-btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 
-.bot-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
-.bot-card{display:flex;align-items:center;gap:10px;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;transition:.15s}
+/* Bot picker — clean single column, no overflow */
+.bot-grid{
+  display:flex;flex-direction:column;gap:6px;margin-top:12px;
+  max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding-right:2px;
+}
+.bot-card{
+  display:flex;align-items:center;gap:10px;text-align:left;
+  background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+  padding:10px 12px;transition:.15s;width:100%;min-width:0;
+}
 .bot-card:hover{border-color:var(--gold-dim);transform:translateY(-1px)}
-.bot-card .be{font-size:24px}
-.bot-card .bi{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
-.bot-card .bn{font-weight:700;font-size:13px}
-.bot-card .bd{font-size:10.5px;color:var(--muted);line-height:1.3}
-.bot-card .belo{font-size:10.5px;color:var(--gold);font-weight:700}
+.bot-card:active{transform:scale(.98)}
+.bot-card .be{
+  font-size:20px;flex:none;width:34px;height:34px;
+  display:grid;place-items:center;background:var(--panel3);
+  border-radius:8px;border:1px solid var(--line);
+}
+.bot-card .bi{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;overflow:hidden}
+.bot-card .bn{font-weight:700;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.bot-card .bd{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.bot-card .belo{font-size:11px;color:var(--gold);font-weight:700;flex:none;min-width:38px;text-align:right;font-variant-numeric:tabular-nums}
 
 .opp-card{display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0}
 .opp-card .oa{width:80px;height:80px;border-radius:24px;background:linear-gradient(160deg,var(--panel3),var(--panel));border:1px solid var(--gold-dim);display:grid;place-items:center;font-size:40px}
@@ -354,7 +379,6 @@ body.focus-mode .pcard{max-width:min(100vw - 12px,100vh - 12px);margin:0 auto}
 .opp-card .od{font-size:12px;text-align:center;color:var(--muted);padding:0 12px}
 
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:90}
-.small{font-size:12px}
 
 @media(min-width:820px){
   .game-layout{flex-direction:row;align-items:flex-start}
