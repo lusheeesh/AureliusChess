@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='82' font-size='88' fill='%23d4af37'%3E%E2%99%9B%3C/text%3E%3C/svg%3E">
 </head>
-<body data-theme="gold">
+<body>
 
 <div class="aurora"></div>
 
@@ -36,18 +36,14 @@
 
 <main>
 
-<!-- ==================== HOME ==================== -->
 <section class="view active" id="view-home">
   <div class="hero">
     <div class="hero-badge">✦ The Golden Standard</div>
     <h1>Every move, <span class="gold-shine">golden</span>.</h1>
-    <p>Play, learn and watch the royal game — engineered for your phone, no accounts, no limits.</p>
+    <p>Play, learn and watch the royal game — engineered for your phone.</p>
   </div>
 
   <div class="quick-opts">
-    <label class="opt"><span>Level</span>
-      <select id="selLevel"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select>
-    </label>
     <label class="opt"><span>Time</span>
       <select id="selTC">
         <option value="0|0">Casual</option>
@@ -63,13 +59,22 @@
     </label>
   </div>
 
+  <div class="daily-card" id="dailyCard">
+    <div class="dc-left">
+      <div class="dc-label">📅 Daily Puzzle</div>
+      <div class="dc-sub" id="dcSub">Solve today's puzzle for +50 XP</div>
+    </div>
+    <button class="btn sm" id="btnDaily">Solve</button>
+  </div>
+
   <div class="cards">
-    <button class="card" id="btnAI"><span class="ci">🤖</span><b>Play Computer</b><small>Train against Aurelius</small></button>
+    <button class="card" id="btnAI"><span class="ci">🤖</span><b>Play Computer</b><small>13 bots — Martin to Stockfish</small></button>
     <button class="card" id="btnLocal"><span class="ci">👥</span><b>Pass &amp; Play</b><small>Two players, one device</small></button>
     <button class="card" id="btnCreate"><span class="ci">➕</span><b>Create Room</b><small>Invite with a code</small></button>
     <button class="card" id="btnQuick"><span class="ci">⚡</span><b>Quick Match</b><small>Find any open room</small></button>
     <button class="card" id="btnWatch"><span class="ci">👁</span><b>Spectate</b><small>Watch live games</small></button>
     <button class="card" id="btnPuzzlesHome"><span class="ci">🧩</span><b>Puzzles</b><small>Sharpen your tactics</small></button>
+    <button class="card" id="btnEditorHome"><span class="ci">🎨</span><b>Position Editor</b><small>Set up any position</small></button>
   </div>
 
   <div class="join-row">
@@ -81,50 +86,50 @@
   <div class="stats-strip" id="homeStats"></div>
 </section>
 
-<!-- ==================== GAME ==================== -->
 <section class="view" id="view-game">
   <div class="game-layout">
     <div class="board-area">
       <div class="pcard" id="pcTop">
         <span class="pav" id="avTop">♟</span>
-        <div class="pmeta"><span class="pname" id="nameTop">Opponent</span><span class="prate" id="rateTop"></span></div>
+        <div class="pmeta">
+          <span class="pname pname-click" id="nameTop">Opponent</span>
+          <span class="prate" id="rateTop"></span>
+        </div>
+        <span class="spectator-badge hidden" id="spectatorBadge">👁 0</span>
         <span class="pcap" id="capTop"></span>
         <span class="pclock" id="clockTop">--:--</span>
       </div>
 
-      <div class="board-wrap">
+      <div class="board-wrap" id="gameBoardWrap">
         <div class="board" id="board"></div>
-        <svg class="arrow-layer" id="arrowLayer" viewBox="0 0 8 8">
+        <svg class="arrow-layer" id="arrowLayer" viewBox="0 0 8 8" preserveAspectRatio="none">
           <defs>
-            <marker id="arrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(212,175,55,.75)"/>
+            <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(212,175,55,.9)"/>
+            </marker>
+            <marker id="arrowhead-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(74,158,255,.85)"/>
             </marker>
           </defs>
         </svg>
         <div class="emote-pop" id="emotePop"></div>
         <div class="promo hidden" id="promo"></div>
         <div class="board-over hidden" id="boardOver"></div>
+        <button class="focus-btn hidden" id="btnFocusExit" title="Exit focus">✕</button>
       </div>
 
       <div class="pcard" id="pcBot">
         <span class="pav" id="avBot">♞</span>
-        <div class="pmeta"><span class="pname" id="nameBot">You</span><span class="prate" id="rateBot"></span></div>
+        <div class="pmeta">
+          <span class="pname pname-click" id="nameBot">You</span>
+          <span class="prate" id="rateBot"></span>
+        </div>
         <span class="pcap" id="capBot"></span>
         <span class="pclock" id="clockBot">--:--</span>
       </div>
 
       <div class="evalbar hidden" id="evalBar"><div class="evalfill" id="evalFill"></div></div>
-
-      <div class="emote-bar" id="emoteBar">
-        <button data-e="👋">👋</button>
-        <button data-e="👍">👍</button>
-        <button data-e="😎">😎</button>
-        <button data-e="😂">😂</button>
-        <button data-e="😮">😮</button>
-        <button data-e="🔥">🔥</button>
-        <button data-e="😭">😭</button>
-        <button data-e="🤝">🤝</button>
-      </div>
+      <div class="emote-bar" id="emoteBar"></div>
     </div>
 
     <aside class="side">
@@ -147,8 +152,10 @@
         <button class="btn sm" id="btnHint">💡 Hint</button>
         <button class="btn sm" id="btnUndo">↶ Undo</button>
         <button class="btn sm" id="btnFlip">⇅ Flip</button>
+        <button class="btn sm" id="btnArrow" title="Draw arrows on the board">↗ Arrows</button>
         <button class="btn sm" id="btnDraw">½ Draw</button>
         <button class="btn sm danger" id="btnResign">⚑ Resign</button>
+        <button class="btn sm" id="btnFocus">🎯 Focus</button>
         <button class="btn sm" id="btnAnalyze" disabled>📊 Analyze</button>
         <button class="btn sm hidden" id="btnRematch">↻ Rematch</button>
         <button class="btn sm" id="btnExit">✕ Exit</button>
@@ -163,7 +170,6 @@
   </div>
 </section>
 
-<!-- ==================== LOBBY ==================== -->
 <section class="view" id="view-lobby">
   <div class="lobby-head">
     <h2>Live Games</h2>
@@ -172,7 +178,6 @@
   <div id="lobbyList" class="lobby-list"><p class="muted">Scanning for live games…</p></div>
 </section>
 
-<!-- ==================== PUZZLES ==================== -->
 <section class="view" id="view-puzzles">
   <div class="puz-head">
     <h2>Tactics</h2>
@@ -188,7 +193,6 @@
   </div>
 </section>
 
-<!-- ==================== ANALYZE ==================== -->
 <section class="view" id="view-analyze">
   <div class="an-layout">
     <div class="board-wrap"><div class="board" id="anBoard"></div></div>
@@ -203,20 +207,29 @@
         <button class="btn sm" id="anNext">▶</button>
         <button class="btn sm" id="anEnd">⏭</button>
       </div>
-      <ol class="moves" id="anMoves"></ol>
-      <button class="btn sm" id="anCopy">Copy PGN</button>
+      <div class="an-labels-legend" id="anLegend"></div>
+      <ol class="moves moves-labels" id="anMoves"></ol>
+      <div class="an-io">
+        <button class="btn sm" id="anCopy">📋 Copy PGN</button>
+        <button class="btn sm ghost" id="anExport">📤 Export</button>
+        <button class="btn sm ghost" id="anImport">📥 Import</button>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- ==================== PROFILE ==================== -->
 <section class="view" id="view-profile">
   <div class="profile-head">
     <span class="big-avatar" id="profAvatar">♞</span>
     <div>
       <h2 id="profName">Guest</h2>
       <div class="muted" id="profRating">Rating 1200</div>
+      <div class="rank-badge" id="profRank">Bronze III</div>
     </div>
+  </div>
+  <div class="xp-wrap">
+    <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
+    <div class="xp-label"><span id="xpLabel">0 / 500 XP</span><span id="xpRank">Bronze III</span></div>
   </div>
   <div class="stats-grid">
     <div class="stat"><b id="statGames">0</b><span>Games</span></div>
@@ -225,6 +238,8 @@
     <div class="stat"><b id="statLosses">0</b><span>Losses</span></div>
     <div class="stat"><b id="statWinRate">0%</b><span>Win rate</span></div>
   </div>
+  <h3>🏆 Achievements</h3>
+  <div class="ach-grid" id="achGrid"></div>
   <h3>Customize</h3>
   <div class="customize">
     <label class="setting"><span>Display name</span><input id="inpProfileName" maxlength="16" placeholder="Your name"></label>
@@ -238,12 +253,25 @@
   <div id="profHistory" class="history"><p class="muted">No games yet.</p></div>
 </section>
 
-<!-- ==================== SETTINGS ==================== -->
+<section class="view" id="view-editor">
+  <h2>Position Editor</h2>
+  <p class="muted small" id="editorHint">Tap a piece from the palette, then tap a square to place it.</p>
+  <div class="board-wrap"><div class="board" id="editBoard"></div></div>
+  <div class="edit-palette" id="editPalette"></div>
+  <div class="edit-actions">
+    <button class="btn sm ghost" id="edClear">Clear</button>
+    <button class="btn sm ghost" id="edReset">Reset</button>
+    <button class="btn sm ghost" id="edTurn">Turn: White</button>
+    <button class="btn sm" id="edPlay">▶ Play from here</button>
+    <button class="btn sm ghost" id="edAnalyze">📊 Analyze here</button>
+  </div>
+</section>
+
 <section class="view" id="view-settings">
   <h2>Settings</h2>
   <div class="settings-list">
-    <label class="setting"><span>Board theme</span>
-      <select id="setTheme">
+    <label class="setting"><span>Board preset</span>
+      <select id="setPreset">
         <option value="gold">Gold</option>
         <option value="midnight">Midnight</option>
         <option value="emerald">Emerald</option>
@@ -251,9 +279,22 @@
         <option value="rose">Rose</option>
         <option value="amethyst">Amethyst</option>
         <option value="slate">Slate</option>
+        <option value="custom">Custom…</option>
       </select>
     </label>
+    <label class="setting"><span>Light square</span><input type="color" id="setLightColor" value="#ede0c4"></label>
+    <label class="setting"><span>Dark square</span><input type="color" id="setDarkColor" value="#7a5c3a"></label>
     <label class="setting"><span>Sound effects</span><input type="checkbox" id="setSound"></label>
+    <label class="setting"><span>Master volume</span><input type="range" id="setVolume" min="0" max="100" value="80"></label>
+    <label class="setting"><span>Background music</span><input type="checkbox" id="setMusic"></label>
+    <label class="setting"><span>Emote pack</span>
+      <select id="setEmotePack">
+        <option value="basic">Basic</option>
+        <option value="royal">Royal</option>
+        <option value="meme">Meme</option>
+        <option value="animals">Animals</option>
+      </select>
+    </label>
     <label class="setting"><span>Coordinates</span><input type="checkbox" id="setCoords"></label>
     <label class="setting"><span>Legal move dots</span><input type="checkbox" id="setLegal"></label>
     <label class="setting"><span>Last-move arrow</span><input type="checkbox" id="setArrow"></label>
@@ -263,20 +304,18 @@
   </div>
 </section>
 
-<!-- ==================== ABOUT ==================== -->
 <section class="view" id="view-about">
   <h2>About <span class="gold">AURELIUS</span></h2>
-  <p class="muted">The Golden Standard of online chess — built mobile-first, account-free, and free forever.</p>
+  <p class="muted">The Golden Standard of online chess — account-free, forever free.</p>
   <ul class="feat">
-    <li>Full FIDE rules: castling, en passant, promotion, checks, stalemate, 50-move, threefold, insufficient material.</li>
-    <li>Play the AI at three strengths, or Pass &amp; Play with a friend.</li>
-    <li>Online multiplayer with room codes — no accounts, no signup, no keys.</li>
-    <li>Live spectating of any room by code.</li>
-    <li>In-game chat, emotes, draw offers, resignation, rematch.</li>
-    <li>Real clocks with increment, bullet / blitz / rapid.</li>
-    <li>Loginless profile with avatar, name, Elo rating, W/L/D history.</li>
-    <li>Seven board themes, synthesized sound effects, last-move arrows, confetti wins.</li>
-    <li>Puzzle trainer, full game analysis with eval graph and best-move suggestions.</li>
+    <li>Full FIDE rules with castling, en passant, promotion, all draw rules.</li>
+    <li>13 personality bots from Martin (250) to Stockfish (3200).</li>
+    <li>Loginless online multiplayer and live spectating.</li>
+    <li>Drag-and-drop, premoves, arrows, castling animations.</li>
+    <li>XP, ranks, achievements, daily puzzle streaks.</li>
+    <li>Chess.com-style move labels: brilliant, best, mistake, blunder.</li>
+    <li>Custom board colors, emote packs, background music.</li>
+    <li>PGN import/export, position editor, focus mode.</li>
   </ul>
   <div class="credit">Made with ♛ by <b>Alphabet</b></div>
 </section>
