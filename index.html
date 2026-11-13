@@ -11,19 +11,17 @@
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='82' font-size='88' fill='%23d4af37'%3E%E2%99%9B%3C/text%3E%3C/svg%3E">
 <script>
-/* Inline error display — shows JS errors on screen (mobile-friendly) */
 (function(){
   function show(msg,color){
     var d=document.getElementById('__err');
     if(!d){
-      d=document.createElement('div');
-      d.id='__err';
+      d=document.createElement('div');d.id='__err';
       d.style.cssText='position:fixed;top:56px;left:8px;right:8px;background:'+(color||'#e05252')+';color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;z-index:999999;font-family:monospace;white-space:pre-wrap;word-break:break-word;max-height:45vh;overflow:auto;box-shadow:0 4px 20px rgba(0,0,0,.6);line-height:1.4';
       document.body.appendChild(d);
     }
-    d.textContent+= (d.textContent?'\n\n':'') + msg;
+    d.textContent+=(d.textContent?'\n\n':'')+msg;
   }
-  window.__showErr = show;
+  window.__showErr=show;
   window.addEventListener('error',function(e){
     show('❌ '+(e.message||'script error')+'\n@ '+(e.filename?e.filename.split('/').pop():'?')+':'+(e.lineno||'?'));
   });
@@ -33,11 +31,11 @@
   document.addEventListener('DOMContentLoaded',function(){
     setTimeout(function(){
       if(typeof window.Aurelius==='undefined'){
-        show('⚠️ engine.js did not load. Check the file exists next to index.html.','#f0a500');
+        show('⚠️ engine.js did not load.','#f0a500');
       } else if(!window.Aurelius.BOTS){
-        show('⚠️ engine.js is an OLD version (missing BOTS). Replace engine.js with the latest.','#f0a500');
+        show('⚠️ engine.js is OLD — replace with latest.','#f0a500');
       } else if(!document.querySelector('#homeStats .s')){
-        show('⚠️ app.js did not initialise (buttons unbound). Check app.js is loaded.','#f0a500');
+        show('⚠️ app.js did not initialise.','#f0a500');
       }
     },2500);
   });
@@ -101,7 +99,7 @@
   </div>
 
   <div class="cards">
-    <button class="card" id="btnAI"><span class="ci">🤖</span><b>Play Computer</b><small>13 bots — Martin to Stockfish</small></button>
+    <button class="card" id="btnAI"><span class="ci">🤖</span><b>Play Computer</b><small>14 bots — Mittens to Stockfish</small></button>
     <button class="card" id="btnLocal"><span class="ci">👥</span><b>Pass &amp; Play</b><small>Two players, one device</small></button>
     <button class="card" id="btnCreate"><span class="ci">➕</span><b>Create Room</b><small>Invite with a code</small></button>
     <button class="card" id="btnQuick"><span class="ci">⚡</span><b>Quick Match</b><small>Find any open room</small></button>
@@ -145,10 +143,10 @@
             </marker>
           </defs>
         </svg>
+        <div class="comment-bubble hidden" id="oppComment"></div>
         <div class="emote-pop" id="emotePop"></div>
         <div class="promo hidden" id="promo"></div>
         <div class="board-over hidden" id="boardOver"></div>
-        <button class="focus-btn hidden" id="btnFocusExit" title="Exit focus">✕</button>
       </div>
 
       <div class="pcard" id="pcBot">
@@ -188,7 +186,6 @@
         <button class="btn sm" id="btnArrow" title="Draw arrows on the board">↗ Arrows</button>
         <button class="btn sm" id="btnDraw">½ Draw</button>
         <button class="btn sm danger" id="btnResign">⚑ Resign</button>
-        <button class="btn sm" id="btnFocus">🎯 Focus</button>
         <button class="btn sm" id="btnAnalyze" disabled>📊 Analyze</button>
         <button class="btn sm hidden" id="btnRematch">↻ Rematch</button>
         <button class="btn sm" id="btnExit">✕ Exit</button>
@@ -342,13 +339,13 @@
   <p class="muted">The Golden Standard of online chess — account-free, forever free.</p>
   <ul class="feat">
     <li>Full FIDE rules with castling, en passant, promotion, all draw rules.</li>
-    <li>13 personality bots from Martin (250) to Stockfish (3200).</li>
+    <li>14 personality bots from Mittens (1) to Stockfish (3200).</li>
     <li>Loginless online multiplayer and live spectating.</li>
     <li>Drag-and-drop, premoves, arrows, castling animations.</li>
     <li>XP, ranks, achievements, daily puzzle streaks.</li>
     <li>Chess.com-style move labels: brilliant, best, mistake, blunder.</li>
     <li>Custom board colors, emote packs, background music.</li>
-    <li>PGN import/export, position editor, focus mode.</li>
+    <li>PGN import/export, position editor.</li>
   </ul>
   <div class="credit">Made with ♛ by <b>Alphabet</b></div>
 </section>
@@ -369,7 +366,6 @@
 <div id="toast" class="toast"></div>
 <div id="modal" class="modal hidden"></div>
 
-<!-- mqtt is ASYNC — it must never block the app from loading -->
 <script async src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script src="engine.js"></script>
 <script src="app.js"></script>
