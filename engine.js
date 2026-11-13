@@ -1,4 +1,4 @@
-/* AURELIUS ENGINE — rules, move generation, SAN, AI, PGN */
+/* AURELIUS ENGINE v3 — full chess engine + v3 additions */
 (function (global) {
   'use strict';
 
@@ -8,7 +8,6 @@
   const ORTH = [[1,0],[-1,0],[0,1],[0,-1]];
   const ALL = DIAG.concat(ORTH);
   const FILES = 'abcdefgh';
-
   const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
   const isUpper = c => c >= 'A' && c <= 'Z';
@@ -29,8 +28,7 @@
       else board[i++] = ch;
     }
     return {
-      board,
-      turn: parts[1] || 'w',
+      board, turn: parts[1] || 'w',
       castling: (parts[2] && parts[2] !== '-') ? parts[2] : '',
       ep: (parts[3] && parts[3] !== '-') ? nameToSq(parts[3]) : -1,
       halfmove: +(parts[4] || 0),
@@ -316,7 +314,6 @@
     return san + suffix;
   }
 
-  /* ---------- AI ---------- */
   const VAL = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
   const PST = {
     p: [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10, 5,5,10,25,25,10,5,5, 0,0,0,20,20,0,0,0, 5,-5,-10,0,0,-10,-5,5, 5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
@@ -443,9 +440,236 @@
     return pgn;
   }
 
+  /* ========== V3 ADDITIONS ========== */
+
+  function materialFor(st, color) {
+    let sum = 0;
+    for (const p of st.board) {
+      if (!p) continue;
+      if (colorOf(p) !== color) continue;
+      sum += VAL[typeOf(p)] || 0;
+    }
+    return sum;
+  }
+
+  const BOTS = [
+    {id:'martin',  name:'Martin',      elo:250,  emoji:'🐭', desc:'Beginner. Blunders often.',       depth:1, random:220},
+    {id:'nelson',  name:'Nelson',      elo:1300, emoji:'🎩', desc:'Loves the queen trick.',          depth:2, random:70},
+    {id:'duke',    name:'Duke',        elo:1500, emoji:'⚔️', desc:'Aggressive attacker.',            depth:2, random:55, aggression:1.3},
+    {id:'isabel',  name:'Isabel',      elo:1600, emoji:'👑', desc:'Solid positional player.',        depth:2, random:35},
+    {id:'wally',   name:'Wally',       elo:1800, emoji:'🤡', desc:'Tricky and unpredictable.',       depth:2, random:25},
+    {id:'sven',    name:'Sven',        elo:2000, emoji:'🧔', desc:'Balanced club player.',           depth:3, random:15},
+    {id:'antonia', name:'Antonia',     elo:2200, emoji:'🎭', desc:'Patient and precise.',            depth:3, random:10},
+    {id:'mittens', name:'Mittens',     elo:2500, emoji:'🐱', desc:'The cat. Chaos incarnate.',       depth:3, random:8, aggression:1.2},
+    {id:'witty',   name:'Witty Alien', elo:2600, emoji:'👽', desc:'Out of this world tactics.',      depth:3, random:6},
+    {id:'gotham',  name:'GothamChess', elo:2700, emoji:'🗽', desc:'The Levy. Shows no mercy.',       depth:3, random:4},
+    {id:'hikaru',  name:'Hikaru',      elo:2800, emoji:'⚡', desc:'Blitz speed, bullet brain.',      depth:4, random:2},
+    {id:'magnus',  name:'Magnus',      elo:2850, emoji:'🏆', desc:'The World Champion.',             depth:4, random:0},
+    {id:'stock',   name:'Stockfish',   elo:3200, emoji:'🐟', desc:'The engine. Inhuman.',            depth:5, random:0},
+  ];
+
+  const ECO = [
+    ['e4',"King's Pawn"],['e4 e5','Open Game'],['e4 e5 Nf3',"King's Knight"],
+    ['e4 e5 Nf3 Nc6','Open Game'],['e4 e5 Nf3 Nc6 Bb5','Ruy López'],
+    ['e4 e5 Nf3 Nc6 Bc4','Italian Game'],['e4 e5 Nf3 Nc6 d4','Scotch Game'],
+    ['e4 e5 Nf3 Nf6','Petrov Defense'],['e4 e5 Nc3','Vienna Game'],
+    ['e4 e5 f4',"King's Gambit"],['e4 c5','Sicilian Defense'],
+    ['e4 c5 Nf3 d6','Sicilian Defense'],['e4 c5 Nf3 Nc6','Sicilian: Old Sicilian'],
+    ['e4 c5 Nf3 e6','Sicilian: French Variation'],['e4 c5 Nc3','Sicilian: Closed'],
+    ['e4 e6','French Defense'],['e4 c6','Caro-Kann Defense'],
+    ['e4 d5','Scandinavian Defense'],['e4 Nf6','Alekhine Defense'],
+    ['e4 d6','Pirc Defense'],['e4 g6','Modern Defense'],['e4 Nc6','Nimzowitsch Defense'],
+    ['d4',"Queen's Pawn"],['d4 d5','Closed Game'],['d4 d5 c4',"Queen's Gambit"],
+    ['d4 d5 c4 e6',"Queen's Gambit Declined"],['d4 d5 c4 c6','Slav Defense'],
+    ['d4 d5 c4 dxc4',"Queen's Gambit Accepted"],['d4 d5 c4 Nf6','Marshall Defense'],
+    ['d4 Nf6','Indian Defense'],['d4 Nf6 c4 e6','Indian Game'],
+    ['d4 Nf6 c4 g6',"King's Indian Defense"],
+    ['d4 Nf6 c4 e6 Nc3 Bb4','Nimzo-Indian Defense'],
+    ['d4 Nf6 c4 e6 Nf3 b6',"Queen's Indian Defense"],
+    ['d4 Nf6 c4 c5','Benoni Defense'],['d4 f5','Dutch Defense'],
+    ['c4','English Opening'],['c4 e5','English: Reversed Sicilian'],
+    ['c4 c5','English: Symmetrical'],['c4 Nf6','English: Anglo-Indian'],
+    ['Nf3','Réti Opening'],['Nf3 d5 c4','Réti Opening'],
+    ['g3','Benko Opening'],['b3','Nimzo-Larsen Attack'],
+    ['b4','Sokolsky Opening'],['f4',"Bird's Opening"],
+  ];
+
+  function openingName(sans) {
+    if (!sans || !sans.length) return null;
+    const line = sans.join(' ');
+    let best = null;
+    for (const [seq, name] of ECO) {
+      if (line === seq || line.startsWith(seq + ' ')) {
+        if (!best || seq.length > best.seq.length) best = { seq, name };
+      }
+    }
+    return best ? best.name : null;
+  }
+
+  function parsePGN(pgn) {
+    if (!pgn) return [];
+    let text = '';
+    for (const line of pgn.split(/\r?\n/)) {
+      const t = line.trim();
+      if (!t) continue;
+      if (t.startsWith('[')) continue;
+      text += ' ' + t;
+    }
+    text = text.replace(/\{[^}]*\}/g, ' ').replace(/;[^\n]*/g, ' ');
+    let clean = '', depth = 0;
+    for (const ch of text) {
+      if (ch === '(') depth++;
+      else if (ch === ')') { if (depth > 0) depth--; }
+      else if (depth === 0) clean += ch;
+    }
+    const tokens = clean.trim().split(/\s+/).filter(t => t &&
+      !/^\d+\.*$/.test(t) &&
+      !/^(1-0|0-1|1\/2-1\/2|\*)$/.test(t) &&
+      !/^\$\d+$/.test(t)
+    );
+    const st = parseFen(START_FEN);
+    const moves = [];
+    for (const san of tokens) {
+      const legal = legalMoves(st);
+      let found = null;
+      for (const lmv of legal) {
+        if (moveToSan(st, lmv, legal) === san) { found = lmv; break; }
+      }
+      if (!found) break;
+      moves.push({ from: found.from, to: found.to, promo: found.promo || null });
+      makeMove(st, found);
+    }
+    return moves;
+  }
+
+  function findBestMoveV2(fen, opts) {
+    let depth = 2, random = 0, aggression = 1.0;
+    if (typeof opts === 'string') {
+      if (opts === 'easy') { depth = 1; random = 80; }
+      else if (opts === 'hard') { depth = 4; random = 0; }
+      else { depth = 2; random = 30; }
+    } else if (opts && typeof opts === 'object') {
+      depth = opts.depth || 2;
+      random = opts.random || 0;
+      aggression = opts.aggression || 1.0;
+    }
+
+    const st = parseFen(fen);
+    const moves = legalMoves(st);
+    if (!moves.length) return null;
+
+    if (depth <= 1 && random > 150 && Math.random() < 0.35) {
+      return moves[Math.floor(Math.random() * moves.length)];
+    }
+
+    const deadline = Date.now() + (depth >= 4 ? 1400 : depth === 3 ? 600 : 250);
+    const scored = moves.map(m => {
+      const u = makeMove(st, m);
+      let s;
+      if (aggression > 1.0 && u.captured) {
+        const capVal = VAL[typeOf(u.captured)] || 0;
+        s = -search(st, depth - 1, -Infinity, Infinity, deadline) + (capVal * (aggression - 1));
+      } else {
+        s = -search(st, depth - 1, -Infinity, Infinity, deadline);
+      }
+      unmakeMove(st, u);
+      return { m, s: s + (random ? (Math.random() - 0.5) * random * 2 : 0) };
+    });
+    scored.sort((a, b) => b.s - a.s);
+    if (random > 30 && scored.length > 1 && Math.random() < 0.4) return scored[1].m;
+    return scored[0].m;
+  }
+
+  const LABELS = {
+    book:       { icon:'📖', color:'#a88d4c', text:'Book' },
+    brilliant:  { icon:'💎', color:'#1abcfe', text:'Brilliant' },
+    best:       { icon:'⭐', color:'#81b64c', text:'Best' },
+    excellent:  { icon:'✨', color:'#96bc4b', text:'Excellent' },
+    good:       { icon:'👍', color:'#96af8b', text:'Good' },
+    inaccuracy: { icon:'⚠️', color:'#f7c631', text:'Inaccuracy' },
+    mistake:    { icon:'❗', color:'#ffa459', text:'Mistake' },
+    blunder:    { icon:'💀', color:'#fa412d', text:'Blunder' },
+  };
+
+  function evalFor(st, color) {
+    const raw = evaluate(st);
+    return st.turn === color ? raw : -raw;
+  }
+
+  function fenAfterMove(startFen, moves, n) {
+    const st = parseFen(startFen);
+    for (let i = 0; i < n; i++) {
+      const legal = legalMoves(st);
+      const mv = moves[i];
+      const m = legal.find(x => x.from === mv.from && x.to === mv.to &&
+        (mv.promo ? x.promo === mv.promo : !x.promo));
+      if (!m) break;
+      makeMove(st, m);
+    }
+    return toFen(st);
+  }
+
+  function analyzeGame(startFen, moves, sans) {
+    const out = [];
+    let inBook = true;
+    for (let i = 0; i < moves.length; i++) {
+      const fenBefore = i === 0 ? startFen : fenAfterMove(startFen, moves, i);
+      const stB = parseFen(fenBefore);
+      const mover = stB.turn;
+      const legal = legalMoves(stB);
+      const played = moves[i];
+      const playedMv = legal.find(x => x.from === played.from && x.to === played.to &&
+        (played.promo ? x.promo === played.promo : !x.promo));
+      if (!playedMv) { out.push({ label: 'good', evalCp: 0 }); continue; }
+
+      if (inBook) {
+        if (!openingName(sans.slice(0, i + 1))) inBook = false;
+      }
+
+      const matBefore = materialFor(stB, mover);
+      const stAfter = parseFen(fenBefore);
+      makeMove(stAfter, playedMv);
+      const playedEval = evalFor(stAfter, mover);
+      const matAfter = materialFor(stAfter, mover);
+      const sacrificed = matBefore - matAfter;
+
+      const best = findBestMoveV2(fenBefore, { depth: 2, random: 0 });
+      let bestEval = playedEval;
+      let playedIsBest = false;
+      if (best) {
+        playedIsBest = (best.from === played.from && best.to === played.to &&
+          (best.promo || null) === (played.promo || null));
+        const stBest = parseFen(fenBefore);
+        const bestMv = legal.find(x => x.from === best.from && x.to === best.to &&
+          (best.promo ? x.promo === best.promo : !x.promo));
+        if (bestMv) {
+          makeMove(stBest, bestMv);
+          bestEval = evalFor(stBest, mover);
+        }
+      }
+      const delta = bestEval - playedEval;
+
+      let label = 'good';
+      if (inBook) label = 'book';
+      else if (sacrificed >= 200 && playedEval > -100) label = 'brilliant';
+      else if (playedIsBest) label = 'best';
+      else if (delta < 25) label = 'excellent';
+      else if (delta < 80) label = 'good';
+      else if (delta < 180) label = 'inaccuracy';
+      else if (delta < 350) label = 'mistake';
+      else label = 'blunder';
+
+      out.push({ label, evalCp: playedEval });
+    }
+    return out;
+  }
+
   global.Aurelius = {
     START_FEN, parseFen, toFen, posKey, legalMoves, makeMove, unmakeMove,
     inCheck, isAttacked, status, moveToSan, findBestMove, quickEval,
-    bestMoveForAnalysis, sqToName, nameToSq, movesToPgn, evaluate, insufficientMaterial
+    bestMoveForAnalysis, sqToName, nameToSq, movesToPgn, evaluate, insufficientMaterial,
+    BOTS, ECO, LABELS,
+    materialFor, openingName, parsePGN,
+    findBestMoveV2, analyzeGame, evalFor, fenAfterMove,
   };
 })(window);
