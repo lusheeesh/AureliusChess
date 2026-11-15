@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0a0b14">
-<title>AURELIUS — Every move, golden.</title>
+<title>AURELIUS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -113,7 +113,6 @@
     <button class="btn" id="btnJoin">Join</button>
   </div>
 
-  <div class="recent-rooms hidden" id="recentRooms"></div>
   <div class="stats-strip" id="homeStats"></div>
 </section>
 
@@ -133,16 +132,6 @@
 
       <div class="board-wrap" id="gameBoardWrap">
         <div class="board" id="board"></div>
-        <svg class="arrow-layer" id="arrowLayer" viewBox="0 0 8 8" preserveAspectRatio="none">
-          <defs>
-            <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(212,175,55,.9)"/>
-            </marker>
-            <marker id="arrowhead-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(74,158,255,.85)"/>
-            </marker>
-          </defs>
-        </svg>
         <div class="comment-bubble hidden" id="oppComment"></div>
         <div class="emote-pop" id="emotePop"></div>
         <div class="promo hidden" id="promo"></div>
@@ -183,7 +172,6 @@
         <button class="btn sm" id="btnHint">💡 Hint</button>
         <button class="btn sm" id="btnUndo">↶ Undo</button>
         <button class="btn sm" id="btnFlip">⇅ Flip</button>
-        <button class="btn sm" id="btnArrow" title="Draw arrows on the board">↗ Arrows</button>
         <button class="btn sm" id="btnDraw">½ Draw</button>
         <button class="btn sm danger" id="btnResign">⚑ Resign</button>
         <button class="btn sm" id="btnAnalyze" disabled>📊 Analyze</button>
@@ -327,7 +315,6 @@
     </label>
     <label class="setting"><span>Coordinates</span><input type="checkbox" id="setCoords"></label>
     <label class="setting"><span>Legal move dots</span><input type="checkbox" id="setLegal"></label>
-    <label class="setting"><span>Last-move arrow</span><input type="checkbox" id="setArrow"></label>
     <label class="setting"><span>Auto-flip (Pass &amp; Play)</span><input type="checkbox" id="setAutoflip"></label>
     <label class="setting"><span>Show eval bar vs AI</span><input type="checkbox" id="setEval"></label>
     <button class="btn" id="btnSaveSettings">Save Settings</button>
@@ -341,7 +328,7 @@
     <li>Full FIDE rules with castling, en passant, promotion, all draw rules.</li>
     <li>14 personality bots from Mittens (1) to Stockfish (3200).</li>
     <li>Loginless online multiplayer and live spectating.</li>
-    <li>Drag-and-drop, premoves, arrows, castling animations.</li>
+    <li>Drag-and-drop, premoves, castling animations.</li>
     <li>XP, ranks, achievements, daily puzzle streaks.</li>
     <li>Chess.com-style move labels: brilliant, best, mistake, blunder.</li>
     <li>Custom board colors, emote packs, background music.</li>
@@ -360,7 +347,7 @@
   <button data-view="profile"><span>♞</span>Profile</button>
 </nav>
 
-<footer class="site-footer">Made by <b>Alphabet</b> · AURELIUS ♛</footer>
+<footer class="site-footer">Made by <b>Alphabet</b></footer>
 
 <canvas id="confetti"></canvas>
 <div id="toast" class="toast"></div>
