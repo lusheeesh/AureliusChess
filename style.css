@@ -414,3 +414,24 @@ main{padding:14px;max-width:1200px;margin:0 auto}
   66% { content: ' ···'; opacity: 1; }
   100% { content: ' ···'; opacity: .3; }
 }
+
+/* Analysis move-label badge on the destination square */
+.move-label-icon {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  font-size: 3.5cqw;
+  line-height: 1;
+  z-index: 4;
+  background: rgba(10,11,20,.85);
+  border-radius: 4px;
+  padding: 0 2px;
+  border: 1px solid var(--lc, var(--gold-dim));
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.9));
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.5cqw;
+  min-height: 4.5cqw;
+}
