@@ -1,4 +1,4 @@
-/* AURELIUS APP v3.1 — pieces move, focus removed, bot comments */
+/* AURELIUS APP v3.2 — multiplayer fixed, clock waits for opponent */
 (function(){
 'use strict';
 const A = window.Aurelius;
@@ -7,7 +7,6 @@ const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
 const GLYPH = {k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'};
 const FILES = 'abcdefgh';
 const SID = Math.random().toString(36).slice(2,10);
-const NS = 'http://www.w3.org/2000/svg';
 const colorOf = p => (p && p === p.toUpperCase()) ? 'w' : 'b';
 
 function toast(msg,type){
@@ -16,7 +15,7 @@ function toast(msg,type){
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2400);
 }
 
-const DEF={theme:'gold',lightColor:'#ede0c4',darkColor:'#7a5c3a',sound:true,volume:0.85,music:false,emotePack:'basic',coords:true,legal:true,arrow:true,showEval:false,autoflip:true};
+const DEF={theme:'gold',lightColor:'#ede0c4',darkColor:'#7a5c3a',sound:true,volume:0.85,music:false,emotePack:'basic',coords:true,legal:true,showEval:false,autoflip:true};
 const SETTINGS=Object.assign({},DEF,JSON.parse(localStorage.getItem('aur.settings')||'{}'));
 function saveSettings(){localStorage.setItem('aur.settings',JSON.stringify(SETTINGS));}
 
@@ -148,9 +147,10 @@ function awardXP(n){
 
 /* ============ MQTT ============ */
 let client=null;
-const Net={topic:null,room:null,role:null,connected:false,spectators:0,host:null,opponent:null};
+const Net={topic:null,room:null,role:null,connected:false,spectators:0,stateReceived:false};
 const lobbyRooms=new Map();
 const activeSubs=new Set();
+const spectatorSids=new Set();
 
 function initMQTT(){
   if(typeof mqtt==='undefined'){setTimeout(initMQTT,1500);return;}
@@ -252,24 +252,6 @@ function renderBoardInto(el,st,opt){
   el.innerHTML=html;
 }
 
-function renderArrows(svg,arrows,flip,last){
-  if(!svg)return;
-  svg.querySelectorAll('line').forEach(l=>l.remove());
-  if(last&&SETTINGS.arrow)addArrow(svg,last.from,last.to,flip,'rgba(212,175,55,.75)','arrowhead');
-  for(const a of arrows||[])addArrow(svg,a.from,a.to,flip,a.color||'rgba(255,120,120,.85)','arrowhead');
-}
-function addArrow(svg,from,to,flip,color,marker){
-  if(from==null||to==null)return;
-  const f=i=>flip?7-(i%8):(i%8);
-  const r=i=>flip?7-Math.floor(i/8):Math.floor(i/8);
-  const ln=document.createElementNS(NS,'line');
-  ln.setAttribute('x1',f(from)+0.5);ln.setAttribute('y1',r(from)+0.5);
-  ln.setAttribute('x2',f(to)+0.5);ln.setAttribute('y2',r(to)+0.5);
-  ln.setAttribute('stroke',color);ln.setAttribute('stroke-width','0.12');
-  ln.setAttribute('stroke-linecap','round');ln.setAttribute('marker-end',`url(#${marker})`);
-  svg.appendChild(ln);
-}
-
 /* ============ GAME ============ */
 const G={
   active:false,mode:null,st:null,startFen:A.START_FEN,
@@ -280,7 +262,7 @@ const G={
   selected:-1,legal:[],pending:null,hint:null,
   players:{w:{name:'White',rating:'',avatar:'♔'},b:{name:'Black',rating:'',avatar:'♚'}},
   rated:false,opponentRating:1200,
-  premove:null,arrows:[],arrowMode:false,
+  premove:null,
 };
 
 function parseTC(s){const[a,b]=(s||'0|0').split('|').map(Number);return{base:a||0,inc:b||0};}
@@ -297,10 +279,15 @@ function startGame(o){
   G.players=o.players||{w:{name:'White',rating:'',avatar:'♔'},b:{name:'Black',rating:'',avatar:'♚'}};
   G.rated=!!o.rated;G.room=o.room||null;
   G.opponentRating=o.opponentRating||1200;
-  G.premove=null;G.arrows=[];
+  G.premove=null;
   G.flip=G.myColor==='b';
   const tc=o.tc||{base:0,inc:0};
-  G.clock=tc.base>0?{base:tc.base,inc:tc.inc,w:tc.base,b:tc.base,active:'w',last:Date.now()}:null;
+  const isOnline = o.mode === 'online';
+  G.clock = tc.base > 0 ? {
+    base: tc.base, inc: tc.inc, w: tc.base, b: tc.base,
+    active: isOnline ? null : 'w',
+    last: isOnline ? null : Date.now()
+  } : null;
   $('#boardOver').classList.add('hidden');
   $('#promo').classList.add('hidden');
   $('#chatLog').innerHTML='';
@@ -319,13 +306,16 @@ function startGame(o){
 }
 function cleanupGame(){
   if(G.clockTimer){clearInterval(G.clockTimer);G.clockTimer=null;}
+  if(Net.role==='host')stopHosting();
   if(Net.topic){unsubTopic(Net.topic);Net.topic=null;}
+  Net.role=null;Net.room=null;Net.spectators=0;Net.stateReceived=false;
+  spectatorSids.clear();
   G.active=false;
 }
 function startClock(){if(G.clockTimer)clearInterval(G.clockTimer);G.clockTimer=setInterval(tick,100);}
 function clockRem(c){
   const cc=G.clock;let t=c==='w'?cc.w:cc.b;
-  if(cc.active===c&&cc.last)t-=(Date.now()-cc.last);
+  if(cc.active===c && cc.last) t-=(Date.now()-cc.last);
   return Math.max(0,t);
 }
 function tick(){
@@ -353,7 +343,8 @@ function renderClocks(){
   const top=G.flip?'w':'b',bot=G.flip?'b':'w';
   const te=$('#clockTop'),be=$('#clockBot');
   te.textContent=fmtClk(clockRem(top));be.textContent=fmtClk(clockRem(bot));
-  te.classList.toggle('active',G.clock.active===top);be.classList.toggle('active',G.clock.active===bot);
+  te.classList.toggle('active',!!G.clock.active && G.clock.active===top);
+  be.classList.toggle('active',!!G.clock.active && G.clock.active===bot);
   te.classList.toggle('low',clockRem(top)<20000);be.classList.toggle('low',clockRem(bot)<20000);
 }
 
@@ -365,12 +356,10 @@ function renderAll(){
     check:checkIdx,hintFrom:G.hint&&G.hint.from,hintTo:G.hint&&G.hint.to,
     premove:G.premove
   });
-  renderArrows($('#arrowLayer'),G.arrows,G.flip,G.last);
   renderPlayers();renderMoves();renderStatus();renderClocks();renderEval();
   $('#btnAnalyze').disabled=!G.over;
   $('#btnUndo').disabled=G.mode==='online'||G.mode==='spectate';
   $('#btnHint').disabled=G.over||G.mode==='spectate';
-  $('#btnArrow').classList.toggle('on',G.arrowMode);
   $('#emoteBar').style.display=G.mode==='spectate'?'none':'flex';
   $('#spectatorBadge').classList.toggle('hidden',!(G.mode==='spectate'||Net.role==='host'));
   if(G.mode==='spectate'||Net.role==='host')$('#spectatorBadge').textContent='👁 '+Net.spectators;
@@ -424,7 +413,11 @@ function renderStatus(){
   let txt=side+' to move';
   if(A.inCheck(G.st,G.st.turn))txt+=' — check!';
   if(G.mode==='ai'&&G.st.turn!=='w'&&G.myColor==='w')txt='Aurelius is thinking…';
-  if(G.mode==='online'&&G.myColor&&G.st.turn!==G.myColor)txt+=' (opponent)';
+  if(G.mode==='online'){
+    if(G.players.b.name==='Waiting…') txt='Waiting for opponent…';
+    else if(G.players.w.name==='—' && G.players.b.name==='—') txt='Connecting to host…';
+    else if(G.myColor&&G.st.turn!==G.myColor) txt+=' (opponent)';
+  }
   if(G.mode==='spectate')txt='Spectating — '+side+' to move';
   const opening=A.openingName(G.sans);
   if(opening)txt+=' · '+opening;
@@ -442,7 +435,7 @@ function renderEval(){
   }catch(e){}
 }
 
-/* ============ POINTER (fixed) ============ */
+/* ============ POINTER ============ */
 let drag=null;
 
 function getSquareFromPoint(cx,cy){
@@ -460,11 +453,6 @@ function onPointerDown(e){
   if(!sqEl)return;
   const i=+sqEl.dataset.i;
 
-  if(G.arrowMode){
-    drag={kind:'arrow',from:i,startX:e.clientX,startY:e.clientY,moved:false};
-    return;
-  }
-
   const p=G.st.board[i];
   const myTurn=!G.myColor||G.st.turn===G.myColor;
   const canDrag=myTurn&&p&&colorOf(p)===G.st.turn;
@@ -475,7 +463,6 @@ function onPointerDown(e){
   } else {
     drag={kind:'tap',from:i};
   }
-  // NOTE: pointerup/pointermove/pointercancel are attached at module level (below).
 }
 
 function onPointerMove(e){
@@ -492,23 +479,6 @@ function onPointerMove(e){
 function onPointerUp(e){
   if(!drag)return;
   const d=drag;drag=null;
-
-  if(d.kind==='arrow'){
-    const to=getSquareFromPoint(e.clientX,e.clientY);
-    if(to!=null&&to!==d.from){
-      const ex=G.arrows.findIndex(a=>a.from===d.from&&a.to===to);
-      if(ex>=0)G.arrows.splice(ex,1);else G.arrows.push({from:d.from,to});
-    } else if(to===d.from){
-      const c=document.createElementNS(NS,'circle');
-      const f=G.flip?7-(d.from%8):(d.from%8);
-      const r=G.flip?7-Math.floor(d.from/8):Math.floor(d.from/8);
-      c.setAttribute('cx',f+0.5);c.setAttribute('cy',r+0.5);c.setAttribute('r','0.45');
-      c.setAttribute('fill','none');c.setAttribute('stroke','rgba(255,120,120,.85)');c.setAttribute('stroke-width','0.1');
-      $('#arrowLayer').appendChild(c);
-    }
-    renderArrows($('#arrowLayer'),G.arrows,G.flip,G.last);
-    return;
-  }
 
   if(d.kind==='piece'){
     clearGhost();clearDropHighlight();
@@ -530,7 +500,6 @@ function onPointerCancel(){
   $$('.sq.drop-target').forEach(s=>s.classList.remove('drop-target'));
   drag=null;
 }
-// Attach ONCE at module level — critical fix
 document.addEventListener('pointermove',onPointerMove,{passive:false});
 document.addEventListener('pointerup',onPointerUp);
 document.addEventListener('pointercancel',onPointerCancel);
@@ -570,7 +539,7 @@ function attemptMove(from,to){
   if(promos.length){G.pending={from,to};showPromo(to);return true;}
   const m=legal.find(x=>x.from===from&&x.to===to);
   if(!m){play('illegal');return false;}
-  return commit(m.from,m.to,null);
+  return commit(m.from,m.to,null,false);
 }
 
 function handleTap(i){
@@ -612,8 +581,8 @@ function tryExecutePremove(){
   const mv=legal.find(m=>m.from===G.premove.from&&m.to===G.premove.to);
   G.premove=null;
   if(mv){
-    if(mv.promo)commit(mv.from,mv.to,mv.promo);
-    else commit(mv.from,mv.to,null);
+    if(mv.promo)commit(mv.from,mv.to,mv.promo,false);
+    else commit(mv.from,mv.to,null,false);
     return true;
   }
   renderAll();return false;
@@ -624,12 +593,13 @@ function showPromo(to){
   box.innerHTML=`<div class="promo-box">${['q','r','b','n'].map(t=>`<button data-p="${t}">${GLYPH[t]}</button>`).join('')}</div>`;
   box.classList.remove('hidden');
   box.querySelectorAll('button').forEach(x=>{
-    x.onclick=()=>{box.classList.add('hidden');if(G.pending)commit(G.pending.from,G.pending.to,x.dataset.p);};
+    x.onclick=()=>{box.classList.add('hidden');if(G.pending)commit(G.pending.from,G.pending.to,x.dataset.p,false);};
   });
 }
 
-function commit(from,to,promo){
+function commit(from,to,promo,fromPeer){
   if(G.over)return false;
+  if(!fromPeer && G.myColor && G.st.turn !== G.myColor) return false;
   const legal=A.legalMoves(G.st);
   const m=legal.find(x=>x.from===from&&x.to===to&&(promo?x.promo===promo:!x.promo));
   if(!m){play('illegal');return false;}
@@ -650,6 +620,16 @@ function commit(from,to,promo){
   else if(capture)play('capture');
   else play('move');
   $('#promo').classList.add('hidden');
+
+  // Sync peer FIRST (so messages go out even if game just ended)
+  if(G.mode==='online'){
+    if(Net.role==='host'||fromPeer){
+      broadcastState();
+    } else {
+      pubRoom({t:'move',from,to,promo:promo||null});
+    }
+  }
+
   const rep=countRep();
   const stt=A.status(G.st,rep);
   if(stt.over){
@@ -657,7 +637,6 @@ function commit(from,to,promo){
   } else {
     if(G.mode==='local'&&SETTINGS.autoflip)G.flip=G.st.turn==='b';
     renderAll();
-    // Bot comment triggers
     if(G.mode==='ai'&&G.bot){
       const botColor=G.myColor==='w'?'b':'w';
       const oppInCheck=A.inCheck(G.st,G.st.turn);
@@ -671,7 +650,7 @@ function commit(from,to,promo){
       }
     }
     if(G.mode==='ai'&&G.st.turn!=='w')setTimeout(maybeAI,150);
-    if(G.mode==='online'){broadcastState();tryExecutePremove();}
+    if(G.mode==='online')tryExecutePremove();
   }
   return true;
 }
@@ -686,10 +665,9 @@ function maybeAI(){
   if(G.myColor==='w'&&G.st.turn!=='b')return;
   const opts=G.bot||G.level;
   const best=A.findBestMoveV2(A.toFen(G.st),opts);
-  if(best&&!G.over)commit(best.from,best.to,best.promo);
+  if(best&&!G.over)commit(best.from,best.to,best.promo,false);
 }
 
-/* ============ BOT COMMENTS ============ */
 function botSay(bot,category){
   if(!bot||!bot.comments)return;
   const lines=bot.comments[category];
@@ -725,7 +703,6 @@ function endGame(result,reason){
     if(el)el.classList.add('king-fall');
   }
 
-  // Bot comment on game end
   if(G.mode==='ai'&&G.bot){
     if(result==='1/2-1/2')botSay(G.bot,'draw');
     else if(iWon===true)botSay(G.bot,'lose');
@@ -775,7 +752,12 @@ function endGame(result,reason){
   $('#btnAnalyze').disabled=false;
   $('#btnRematch').classList.remove('hidden');
   renderAll();
-  if(G.mode==='online'){pubRoom({t:'end',result,reason});if(Net.role==='host')stopHosting();}
+
+  // Only host publishes the end signal — guest will get it via this
+  if(G.mode==='online' && Net.role==='host'){
+    pubRoom({t:'end',result,reason});
+    stopHosting();
+  }
 }
 
 function confetti(){
@@ -838,8 +820,12 @@ function resign(){
   if(!G.active||G.over)return;
   if(!confirm('Resign this game?'))return;
   const loser=G.myColor||(G.st.turn==='w'?'b':'w');
-  endGame(loser==='w'?'0-1':'1-0','resignation');
-  if(G.mode==='online')pubRoom({t:'resign',result:loser==='w'?'0-1':'1-0'});
+  const result = loser==='w'?'0-1':'1-0';
+  // Guest tells host; host publishes the end via endGame
+  if(G.mode==='online' && Net.role==='guest'){
+    pubRoom({t:'resign',result});
+  }
+  endGame(result,'resignation');
 }
 function drawOffer(){
   if(!G.active||G.over)return;
@@ -869,11 +855,18 @@ function hostRoom(){
   const code=genCode();
   const tc=parseTC($('#selTC').value);
   const rated=$('#chkRated').checked;
-  Net.topic='aurelius/room/'+code;Net.room=code;Net.role='host';Net.spectators=0;
-  subTopic(Net.topic);
-  startGame({mode:'online',myColor:'w',room:{code},rated,tc,
+  // NOTE: topic setup happens in onStart, AFTER startGame's internal cleanupGame
+  startGame({
+    mode:'online',myColor:'w',room:{code},rated,tc,
     players:{w:{name:Profile.name,rating:Profile.rating,avatar:Profile.avatar},b:{name:'Waiting…',rating:'',avatar:'♚'}},
-    onStart:()=>{setTimeout(()=>broadcastState(),300);startHostAnnounce(code,tc);toast('Room '+code+' created');}
+    onStart:()=>{
+      Net.topic='aurelius/room/'+code;
+      Net.room=code;Net.role='host';Net.spectators=0;Net.stateReceived=false;
+      subTopic(Net.topic);
+      setTimeout(()=>broadcastState(),250);
+      startHostAnnounce(code,tc);
+      toast('Room '+code+' created — share the code!');
+    }
   });
   saveRecent(code);
 }
@@ -889,76 +882,130 @@ function joinRoom(code,role){
   code=(code||'').toUpperCase().trim();
   if(!code){toast('Enter a room code');return;}
   if(!Net.connected){toast('Connecting…');setTimeout(()=>joinRoom(code,role),1500);return;}
-  if(Net.topic)cleanupGame();
-  Net.topic='aurelius/room/'+code;Net.room=code;Net.role=role||'guest';Net.spectators=0;
-  subTopic(Net.topic);
   const myRole=role==='spectate'?'spectator':'guest';
   startGame({
     mode:role==='spectate'?'spectate':'online',myColor:null,room:{code},
     players:{w:{name:'—',rating:'',avatar:'♔'},b:{name:'—',rating:'',avatar:'♚'}},
     onStart:()=>{
+      Net.topic='aurelius/room/'+code;
+      Net.room=code;Net.role=(role==='spectate'?'spectator':'guest');Net.spectators=0;Net.stateReceived=false;
+      subTopic(Net.topic);
       toast(role==='spectate'?'Watching room '+code:'Joining room '+code+'…');
-      setTimeout(()=>pubRoom({t:'hello',role:myRole,name:Profile.name,rating:Profile.rating,avatar:Profile.avatar,sid:SID}),200);
+      const helloMsg={t:'hello',role:myRole,name:Profile.name,rating:Profile.rating,avatar:Profile.avatar,sid:SID};
+      // Retry hello a few times so lost packets don't brick the join
+      [250, 1200, 3000].forEach(delay=>{
+        setTimeout(()=>{
+          if(Net.topic && !Net.stateReceived) pubRoom(helloMsg);
+        }, delay);
+      });
+      if(role!=='spectate'){
+        setTimeout(()=>{
+          if(G.mode==='online' && !Net.stateReceived && !G.over){
+            toast('Host not responding — check the room code','error');
+          }
+        }, 5500);
+      }
     }
   });
   saveRecent(code);
 }
 
 function onPeerHello(msg){
-  if(Net.role==='host'){
-    if(msg.role==='guest'&&G.players.b.name==='Waiting…'){
-      G.players.b={name:msg.name,rating:msg.rating,avatar:msg.avatar||'♚'};
-      G.opponentRating=msg.rating||1200;G.myColor='w';
-      broadcastState();renderAll();play('notify');toast(msg.name+' joined!');
-      startHostAnnounce(Net.room,{base:G.clock?G.clock.base:0,inc:G.clock?G.clock.inc:0});
-    } else if(msg.role==='spectator'){Net.spectators++;broadcastState();renderAll();}
+  if(Net.role!=='host')return;
+  if(msg.role==='guest' && G.players.b.name==='Waiting…'){
+    G.players.b={name:msg.name,rating:msg.rating,avatar:msg.avatar||'♚'};
+    G.opponentRating=msg.rating||1200;G.myColor='w';
+    // Both players present — start White's clock
+    if(G.clock){G.clock.active='w';G.clock.last=Date.now();}
+    broadcastState();renderAll();play('notify');toast(msg.name+' joined!');
+    startHostAnnounce(Net.room,{base:G.clock?G.clock.base:0,inc:G.clock?G.clock.inc:0});
+  } else if(msg.role==='spectator' && !spectatorSids.has(msg.sid)){
+    spectatorSids.add(msg.sid);
+    Net.spectators++;
+    broadcastState();renderAll();
   }
 }
+
 function broadcastState(){
   if(!G.active)return;
-  pubRoom({t:'state',fen:A.toFen(G.st),moves:G.moves,last:G.last,turn:G.st.turn,
-    players:G.players,status:G.over?'finished':'playing',result:G.result,reason:G.reason,
-    clock:G.clock?{base:G.clock.base,inc:G.clock.inc,w:clockRem('w'),b:clockRem('b'),active:G.clock.active}:null,
-    rated:G.rated,host:Profile.name,hostAvatar:Profile.avatar,spectators:Net.spectators});
+  pubRoom({
+    t:'state',
+    fen:A.toFen(G.st),
+    moves:G.moves,
+    last:G.last,
+    turn:G.st.turn,
+    players:G.players,
+    status:G.over?'finished':'playing',
+    result:G.result,
+    reason:G.reason,
+    clock:G.clock?{base:G.clock.base,inc:G.clock.inc,w:Math.round(clockRem('w')),b:Math.round(clockRem('b')),active:G.clock.active}:null,
+    rated:G.rated,
+    host:Profile.name,
+    hostAvatar:Profile.avatar,
+    spectators:Net.spectators
+  });
 }
+
 function onPeerState(msg){
   if(Net.role==='host')return;
-  G.st=A.parseFen(msg.fen);G.moves=msg.moves||[];
+  Net.stateReceived = true;
+  G.st=A.parseFen(msg.fen);
+  G.moves=msg.moves||[];
   const replay=replayMoves(G.startFen,G.moves);
   G.sans=replay.sans;G.fens=replay.fens;G.keys=replay.keys;
   G.last=msg.last||null;G.selected=-1;G.legal=[];
-  G.players=msg.players||G.players;G.rated=msg.rated||false;
+  G.players=msg.players||G.players;
+  G.rated=msg.rated||false;
+  if(msg.spectators!=null) Net.spectators=msg.spectators;
   if(!G.myColor){
-    const me=Profile.name;
-    if(msg.players.w.name===me)G.myColor='w';
-    else if(msg.players.b.name===me)G.myColor='b';
+    if(msg.players.w.name===Profile.name) G.myColor='w';
+    else if(msg.players.b.name===Profile.name) G.myColor='b';
+    G.flip=G.myColor==='b';
   }
-  G.flip=G.myColor==='b';
-  if(msg.clock&&!G.clock){G.clock={base:msg.clock.base,inc:msg.clock.inc,w:msg.clock.w,b:msg.clock.b,active:msg.clock.active,last:Date.now()};startClock();}
-  else if(msg.clock&&G.clock){G.clock.w=msg.clock.w;G.clock.b=msg.clock.b;G.clock.active=msg.clock.active;G.clock.last=Date.now();}
+  if(msg.clock){
+    if(!G.clock){
+      G.clock={base:msg.clock.base,inc:msg.clock.inc,w:msg.clock.w,b:msg.clock.b,active:msg.clock.active,last:Date.now()};
+      startClock();
+    } else {
+      G.clock.w=msg.clock.w;G.clock.b=msg.clock.b;
+      G.clock.active=msg.clock.active;G.clock.last=Date.now();
+    }
+  }
   if(msg.status==='finished'&&!G.over){endGame(msg.result||'1/2-1/2',msg.reason||'game over');return;}
   renderAll();
   if(G.myColor&&G.st.turn===G.myColor)tryExecutePremove();
 }
-function onPeerResign(msg){if(Net.role==='host')return;if(!G.over)endGame(msg.result||(G.myColor==='w'?'0-1':'1-0'),'resignation');}
+
+function onPeerResign(msg){
+  if(Net.role==='host' && !G.over) endGame(msg.result||'1-0','resignation');
+}
 function onPeerDraw(msg){
   if(msg.action==='offer'){
-    if(confirm(msg.name+' offers a draw. Accept?')){pubRoom({t:'draw',action:'accept'});endGame('1/2-1/2','agreement');}
-    else pubRoom({t:'draw',action:'decline'});
+    if(confirm(msg.name+' offers a draw. Accept?')){
+      pubRoom({t:'draw',action:'accept'});
+      endGame('1/2-1/2','agreement');
+    } else pubRoom({t:'draw',action:'decline'});
   } else if(msg.action==='accept'){if(!G.over)endGame('1/2-1/2','agreement');}
   else if(msg.action==='decline')toast(msg.name+' declined draw');
 }
 function onPeerRematch(msg){
-  if(Net.role==='host'){
-    if(confirm(msg.name+' wants a rematch. Accept?')){pubRoom({t:'rematch',name:Profile.name,go:true});resetForRematch();}
-  } else if(msg.go)resetForRematch();
-  else toast('Rematch requested');
+  if(msg.go){
+    resetForRematch();
+    return;
+  }
+  if(confirm(msg.name+' wants a rematch. Accept?')){
+    pubRoom({t:'rematch',name:Profile.name,go:true});
+    resetForRematch();
+  }
 }
 function resetForRematch(){
   G.st=A.parseFen(G.startFen);
   G.moves=[];G.sans=[];G.fens=[A.toFen(G.st)];G.keys=[A.posKey(G.st)];
-  G.last=null;G.selected=-1;G.legal=[];G.over=false;G.result=null;G.reason='';G.premove=null;G.arrows=[];
-  if(G.clock){G.clock.w=G.clock.base;G.clock.b=G.clock.base;G.clock.active='w';G.clock.last=Date.now();}
+  G.last=null;G.selected=-1;G.legal=[];G.over=false;G.result=null;G.reason='';G.premove=null;
+  if(G.clock){
+    G.clock.w=G.clock.base;G.clock.b=G.clock.base;
+    G.clock.active='w';G.clock.last=Date.now();
+  }
   $('#boardOver').classList.add('hidden');renderAll();
   if(Net.role==='host')broadcastState();
 }
@@ -978,12 +1025,23 @@ function onRoomMsg(msg){
   switch(msg.t){
     case 'hello':onPeerHello(msg);break;
     case 'state':onPeerState(msg);break;
+    case 'move':
+      if(Net.role==='host' && !G.over){
+        // Guest's move — validate, apply, re-broadcast
+        if(G.st.turn===G.myColor) break; // host's turn — guest can't move
+        const legal=A.legalMoves(G.st);
+        const m=legal.find(x=>x.from===msg.from&&x.to===msg.to&&(msg.promo?x.promo===msg.promo:!x.promo));
+        if(m) commit(m.from,m.to,msg.promo,true);
+      }
+      break;
     case 'chat':addChatMsg(msg.name,msg.text);break;
     case 'emote':showEmote(msg.emoji);break;
     case 'resign':onPeerResign(msg);break;
     case 'draw':onPeerDraw(msg);break;
     case 'rematch':onPeerRematch(msg);break;
-    case 'end':if(Net.role!=='host'&&!G.over)endGame(msg.result,msg.reason);break;
+    case 'end':
+      if(Net.role!=='host' && !G.over) endGame(msg.result,msg.reason);
+      break;
   }
 }
 
@@ -1090,7 +1148,6 @@ function loadSettingsUI(){
   $('#setEmotePack').value=SETTINGS.emotePack;
   $('#setCoords').checked=SETTINGS.coords;
   $('#setLegal').checked=SETTINGS.legal;
-  $('#setArrow').checked=SETTINGS.arrow;
   $('#setAutoflip').checked=SETTINGS.autoflip;
   $('#setEval').checked=SETTINGS.showEval;
 }
@@ -1411,12 +1468,6 @@ function wire(){
   };
   $('#btnUndo').onclick=()=>{play('click');undo();};
   $('#btnFlip').onclick=()=>{play('click');G.flip=!G.flip;renderAll();};
-  $('#btnArrow').onclick=()=>{
-    G.arrowMode=!G.arrowMode;
-    if(!G.arrowMode){G.arrows=[];renderArrows($('#arrowLayer'),[],G.flip,G.last);}
-    toast(G.arrowMode?'Arrow mode ON — drag to draw':'Arrow mode OFF');
-    renderAll();
-  };
   $('#btnDraw').onclick=()=>{play('click');drawOffer();};
   $('#btnResign').onclick=()=>{play('click');resign();};
   $('#btnAnalyze').onclick=()=>{play('click');openAnalysis();};
@@ -1445,7 +1496,6 @@ function wire(){
     SETTINGS.emotePack=$('#setEmotePack').value;
     SETTINGS.coords=$('#setCoords').checked;
     SETTINGS.legal=$('#setLegal').checked;
-    SETTINGS.arrow=$('#setArrow').checked;
     SETTINGS.autoflip=$('#setAutoflip').checked;
     SETTINGS.showEval=$('#setEval').checked;
     saveSettings();applyTheme();
