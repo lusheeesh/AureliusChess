@@ -389,3 +389,28 @@ main{padding:14px;max-width:1200px;margin:0 auto}
   .tabbar{position:sticky;bottom:0}
   body{padding-bottom:0}
 }
+
+/* Thinking pulse — shows when a bot is "analyzing" */
+.pcard.thinking {
+  animation: thinkingPulse 1.4s ease-in-out infinite;
+  border-color: rgba(212,175,55,.5) !important;
+}
+@keyframes thinkingPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(212,175,55,.15), 0 0 8px rgba(212,175,55,.1);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(212,175,55,.6), 0 0 16px rgba(212,175,55,.4);
+  }
+}
+.pcard.thinking .pname::after {
+  content: ' ·';
+  color: var(--gold);
+  animation: thinkingDot 1.2s steps(4, end) infinite;
+}
+@keyframes thinkingDot {
+  0% { content: ' ·'; opacity: .3; }
+  33% { content: ' ··'; opacity: .7; }
+  66% { content: ' ···'; opacity: 1; }
+  100% { content: ' ···'; opacity: .3; }
+}
