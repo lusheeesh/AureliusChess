@@ -1,4 +1,4 @@
-/* AURELIUS APP v3.2 — multiplayer fixed, clock waits for opponent */
+/* AURELIUS APP v3.3 — AI fixed, thinking delay, expanded comments */
 (function(){
 'use strict';
 const A = window.Aurelius;
@@ -263,10 +263,53 @@ const G={
   players:{w:{name:'White',rating:'',avatar:'♔'},b:{name:'Black',rating:'',avatar:'♚'}},
   rated:false,opponentRating:1200,
   premove:null,
+  thinking:false,
 };
 
 function parseTC(s){const[a,b]=(s||'0|0').split('|').map(Number);return{base:a||0,inc:b||0};}
 function tcLabel(tc){if(!tc.base)return'Casual';return Math.round(tc.base/60000)+'+'+Math.round(tc.inc/1000);}
+
+/* --- Bot thinking delays per personality --- */
+const BOT_THINK = {
+  martin:   [250, 550],
+  nelson:   [300, 700],
+  duke:     [350, 800],
+  isabel:   [400, 900],
+  wally:    [250, 1600],
+  sven:     [600, 1200],
+  antonia:  [700, 1300],
+  mittens:  [200, 2000],
+  witty:    [500, 1100],
+  gotham:   [700, 1400],
+  fischer:  [800, 1600],
+  hikaru:   [400, 1000],
+  magnus:   [900, 1800],
+  stock:    [1000, 2000],
+};
+function getThinkDelay(bot, legalCount){
+  const range = BOT_THINK[bot.id] || [500, 1200];
+  const base = range[0] + Math.random() * (range[1] - range[0]);
+  const complexity = Math.min(legalCount * 30, 600) * Math.random();
+  return Math.min(3000, Math.round(base + complexity));
+}
+
+let aiTimeout = null;
+let aiThinkCommentTimeout = null;
+
+function setThinking(on){
+  G.thinking = !!on;
+  const pc = $('#pcTop');
+  if(pc) pc.classList.toggle('thinking', !!on);
+  renderStatus();
+}
+
+function clearAIThinking(){
+  if(aiTimeout){clearTimeout(aiTimeout);aiTimeout=null;}
+  if(aiThinkCommentTimeout){clearTimeout(aiThinkCommentTimeout);aiThinkCommentTimeout=null;}
+  G.thinking = false;
+  const pc = $('#pcTop');
+  if(pc) pc.classList.remove('thinking');
+}
 
 function startGame(o){
   cleanupGame();
@@ -276,6 +319,7 @@ function startGame(o){
   G.last=null;G.selected=-1;G.legal=[];G.over=false;G.result=null;G.reason='';
   G.pending=null;G.hint=null;G.myColor=o.myColor||null;G.level=o.level||'medium';
   G.bot=o.bot||null;
+  G.thinking=false;
   G.players=o.players||{w:{name:'White',rating:'',avatar:'♔'},b:{name:'Black',rating:'',avatar:'♚'}};
   G.rated=!!o.rated;G.room=o.room||null;
   G.opponentRating=o.opponentRating||1200;
@@ -305,6 +349,7 @@ function startGame(o){
   if(o.onStart)o.onStart();
 }
 function cleanupGame(){
+  clearAIThinking();
   if(G.clockTimer){clearInterval(G.clockTimer);G.clockTimer=null;}
   if(Net.role==='host')stopHosting();
   if(Net.topic){unsubTopic(Net.topic);Net.topic=null;}
@@ -407,12 +452,15 @@ function renderMoves(){
   ol.innerHTML=html;ol.scrollTop=ol.scrollHeight;
 }
 function renderStatus(){
-  const el=$('#statusLine');
+  const el=$('#statusLine');if(!el)return;
   if(G.over){el.textContent=resText(G.result)+' — '+G.reason;return;}
   const side=G.st.turn==='w'?'White':'Black';
   let txt=side+' to move';
   if(A.inCheck(G.st,G.st.turn))txt+=' — check!';
-  if(G.mode==='ai'&&G.st.turn!=='w'&&G.myColor==='w')txt='Aurelius is thinking…';
+  if(G.mode==='ai' && G.st.turn !== G.myColor){
+    const botName = G.bot ? G.bot.name : 'Aurelius';
+    txt = botName + ' is thinking…';
+  }
   if(G.mode==='online'){
     if(G.players.b.name==='Waiting…') txt='Waiting for opponent…';
     else if(G.players.w.name==='—' && G.players.b.name==='—') txt='Connecting to host…';
@@ -599,7 +647,8 @@ function showPromo(to){
 
 function commit(from,to,promo,fromPeer){
   if(G.over)return false;
-  if(!fromPeer && G.myColor && G.st.turn !== G.myColor) return false;
+  // FIX: only block out-of-turn moves in ONLINE mode (was blocking AI too)
+  if(G.mode==='online' && !fromPeer && G.myColor && G.st.turn !== G.myColor) return false;
   const legal=A.legalMoves(G.st);
   const m=legal.find(x=>x.from===from&&x.to===to&&(promo?x.promo===promo:!x.promo));
   if(!m){play('illegal');return false;}
@@ -621,7 +670,6 @@ function commit(from,to,promo,fromPeer){
   else play('move');
   $('#promo').classList.add('hidden');
 
-  // Sync peer FIRST (so messages go out even if game just ended)
   if(G.mode==='online'){
     if(Net.role==='host'||fromPeer){
       broadcastState();
@@ -643,13 +691,13 @@ function commit(from,to,promo,fromPeer){
       const wasPlayerMove=mover===G.myColor;
       if(wasPlayerMove){
         if(oppInCheck&&G.st.turn===botColor)maybeBotComment('check',0.9);
-        else if(capture)maybeBotComment('playerCapture',0.3);
+        else if(capture)maybeBotComment('playerCapture',0.35);
       } else {
-        if(oppInCheck&&G.st.turn===G.myColor)maybeBotComment('myCheck',0.6);
-        else if(capture)maybeBotComment('capture',0.3);
+        if(oppInCheck&&G.st.turn===G.myColor)maybeBotComment('myCheck',0.7);
+        else if(capture)maybeBotComment('capture',0.4);
       }
     }
-    if(G.mode==='ai'&&G.st.turn!=='w')setTimeout(maybeAI,150);
+    if(G.mode==='ai' && G.st.turn !== G.myColor) setTimeout(maybeAI, 120);
     if(G.mode==='online')tryExecutePremove();
   }
   return true;
@@ -660,35 +708,86 @@ function countRep(){
   return G.keys.filter(k=>k===last).length;
 }
 
+/* ============ AI: thinking delay + realistic feel ============ */
 function maybeAI(){
-  if(!G.active||G.over||G.mode!=='ai')return;
-  if(G.myColor==='w'&&G.st.turn!=='b')return;
-  const opts=G.bot||G.level;
-  const best=A.findBestMoveV2(A.toFen(G.st),opts);
-  if(best&&!G.over)commit(best.from,best.to,best.promo,false);
+  if(!G.active || G.over || G.mode!=='ai') return;
+  if(G.st.turn === G.myColor) return;  // player's turn, nothing to do
+
+  const bot = G.bot || {id:'medium', name:'Aurelius', depth:2, random:30, comments:{}};
+  const legal = A.legalMoves(G.st);
+  if(!legal.length) return;
+
+  // Compute move in background
+  let best;
+  try { best = A.findBestMoveV2(A.toFen(G.st), bot); }
+  catch(e){ console.warn('AI error', e); return; }
+  if(!best || G.over) return;
+
+  const delay = getThinkDelay(bot, legal.length);
+  setThinking(true);
+
+  // Sometimes mutter while thinking
+  if(bot.comments && bot.comments.thinking && Math.random() < 0.35){
+    aiThinkCommentTimeout = setTimeout(() => {
+      if(!G.active || G.over) return;
+      botSay(bot, 'thinking');
+    }, Math.max(250, delay * 0.35));
+  }
+
+  aiTimeout = setTimeout(() => {
+    if(!G.active || G.over) return;
+    setThinking(false);
+
+    const legalNow = A.legalMoves(G.st);
+    const played = legalNow.find(x => x.from===best.from && x.to===best.to && (best.promo ? x.promo===best.promo : !x.promo));
+    if(!played) return;
+
+    const wasCapture = !!G.st.board[best.to];
+    commit(best.from, best.to, best.promo, false);
+
+    // Post-move personality comments
+    if(!G.over){
+      if(bot.random > 100 && Math.random() < 0.1 && bot.comments.blunder){
+        setTimeout(() => { if(G.active && !G.over) botSay(bot, 'blunder'); }, 600);
+      } else if(wasCapture && bot.random < 30 && Math.random() < 0.15 && bot.comments.great){
+        setTimeout(() => { if(G.active && !G.over) botSay(bot, 'great'); }, 600);
+      }
+    }
+
+    // Midgame taunt every ~5 moves
+    if(G.moves.length >= 8 && G.moves.length % 10 < 2 && Math.random() < 0.5 && bot.comments.taunt){
+      setTimeout(() => { if(G.active && !G.over) botSay(bot, 'taunt'); }, 1500);
+    }
+  }, delay);
 }
 
-function botSay(bot,category){
-  if(!bot||!bot.comments)return;
-  const lines=bot.comments[category];
-  if(!lines||!lines.length)return;
-  const line=lines[Math.floor(Math.random()*lines.length)];
-  addChatMsg(bot.name,line);
-  const el=$('#oppComment');if(!el)return;
-  el.textContent=line;el.classList.remove('hidden','hiding');
-  clearTimeout(el._t1);clearTimeout(el._t2);
-  el._t1=setTimeout(()=>{el.classList.add('hiding');el._t2=setTimeout(()=>el.classList.add('hidden'),300);},3500);
+let lastBotSayAt = 0;
+function botSay(bot, category){
+  if(!bot || !bot.comments) return;
+  const lines = bot.comments[category];
+  if(!lines || !lines.length) return;
+  // Debounce: at most 1 bot comment every 1.8 seconds
+  if(Date.now() - lastBotSayAt < 1800) return;
+  lastBotSayAt = Date.now();
+  const line = lines[Math.floor(Math.random() * lines.length)];
+  addChatMsg(bot.name, line);
+  const el = $('#oppComment'); if(!el) return;
+  el.textContent = line;
+  el.classList.remove('hidden','hiding');
+  clearTimeout(el._t1); clearTimeout(el._t2);
+  el._t1 = setTimeout(()=>{el.classList.add('hiding');el._t2 = setTimeout(()=>el.classList.add('hidden'),300);}, 3500);
 }
-function maybeBotComment(category,prob){
-  if(G.mode!=='ai'||!G.bot)return;
-  if(Math.random()>(prob==null?0.5:prob))return;
-  botSay(G.bot,category);
+function maybeBotComment(category, prob){
+  if(G.mode!=='ai' || !G.bot) return;
+  if(Math.random() > (prob==null?0.5:prob)) return;
+  botSay(G.bot, category);
 }
 
 function endGame(result,reason){
   if(G.over)return;
   G.over=true;G.result=result;G.reason=reason;
   if(G.clock)G.clock.active=null;
+  clearAIThinking();
 
   const iWon=G.myColor?((result==='1-0'&&G.myColor==='w')||(result==='0-1'&&G.myColor==='b')):null;
   if(result==='1/2-1/2')play('draw');
@@ -753,7 +852,6 @@ function endGame(result,reason){
   $('#btnRematch').classList.remove('hidden');
   renderAll();
 
-  // Only host publishes the end signal — guest will get it via this
   if(G.mode==='online' && Net.role==='host'){
     pubRoom({t:'end',result,reason});
     stopHosting();
@@ -807,6 +905,7 @@ function showEmote(emoji){
 /* ============ GAME CONTROLS ============ */
 function undo(){
   if(!G.active||G.over||G.mode==='online'||G.mode==='spectate')return;
+  clearAIThinking();
   const plies=(G.mode==='ai'&&G.sans.length>1)?2:1;
   for(let k=0;k<plies&&G.moves.length;k++){G.moves.pop();G.sans.pop();G.fens.pop();G.keys.pop();}
   const lastFen=G.fens[G.fens.length-1]||G.startFen;
@@ -821,7 +920,6 @@ function resign(){
   if(!confirm('Resign this game?'))return;
   const loser=G.myColor||(G.st.turn==='w'?'b':'w');
   const result = loser==='w'?'0-1':'1-0';
-  // Guest tells host; host publishes the end via endGame
   if(G.mode==='online' && Net.role==='guest'){
     pubRoom({t:'resign',result});
   }
@@ -855,7 +953,6 @@ function hostRoom(){
   const code=genCode();
   const tc=parseTC($('#selTC').value);
   const rated=$('#chkRated').checked;
-  // NOTE: topic setup happens in onStart, AFTER startGame's internal cleanupGame
   startGame({
     mode:'online',myColor:'w',room:{code},rated,tc,
     players:{w:{name:Profile.name,rating:Profile.rating,avatar:Profile.avatar},b:{name:'Waiting…',rating:'',avatar:'♚'}},
@@ -892,7 +989,6 @@ function joinRoom(code,role){
       subTopic(Net.topic);
       toast(role==='spectate'?'Watching room '+code:'Joining room '+code+'…');
       const helloMsg={t:'hello',role:myRole,name:Profile.name,rating:Profile.rating,avatar:Profile.avatar,sid:SID};
-      // Retry hello a few times so lost packets don't brick the join
       [250, 1200, 3000].forEach(delay=>{
         setTimeout(()=>{
           if(Net.topic && !Net.stateReceived) pubRoom(helloMsg);
@@ -915,7 +1011,6 @@ function onPeerHello(msg){
   if(msg.role==='guest' && G.players.b.name==='Waiting…'){
     G.players.b={name:msg.name,rating:msg.rating,avatar:msg.avatar||'♚'};
     G.opponentRating=msg.rating||1200;G.myColor='w';
-    // Both players present — start White's clock
     if(G.clock){G.clock.active='w';G.clock.last=Date.now();}
     broadcastState();renderAll();play('notify');toast(msg.name+' joined!');
     startHostAnnounce(Net.room,{base:G.clock?G.clock.base:0,inc:G.clock?G.clock.inc:0});
@@ -1027,8 +1122,7 @@ function onRoomMsg(msg){
     case 'state':onPeerState(msg);break;
     case 'move':
       if(Net.role==='host' && !G.over){
-        // Guest's move — validate, apply, re-broadcast
-        if(G.st.turn===G.myColor) break; // host's turn — guest can't move
+        if(G.st.turn===G.myColor) break;
         const legal=A.legalMoves(G.st);
         const m=legal.find(x=>x.from===msg.from&&x.to===msg.to&&(msg.promo?x.promo===msg.promo:!x.promo));
         if(m) commit(m.from,m.to,msg.promo,true);
