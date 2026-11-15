@@ -1,4 +1,4 @@
-/* AURELIUS APP v3.3 — AI fixed, thinking delay, expanded comments */
+/* AURELIUS APP v3.5 — waiting-for-opponent lock, tab persist, fixed analysis */
 (function(){
 'use strict';
 const A = window.Aurelius;
@@ -194,14 +194,20 @@ function pruneLobby(){
 /* ============ VIEW ============ */
 let currentView='home';
 function switchView(v){
-  currentView=v;
-  $$('.view').forEach(x=>x.classList.toggle('active',x.id==='view-'+v));
-  $$('.tabbar button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+  // If user clicks "Play" while a game is running, take them back to the board, not the home screen
+  if (v === 'home' && G.active) v = 'game';
+  currentView = v;
+  $$('.view').forEach(x=>x.classList.toggle('active', x.id === 'view-' + v));
+  $$('.tabbar button').forEach(b=>{
+    const active = b.dataset.view === v || (v === 'game' && b.dataset.view === 'home');
+    b.classList.toggle('active', active);
+  });
   window.scrollTo(0,0);
   if(v==='lobby'){pruneLobby();renderLobby();}
   if(v==='profile'){renderProfile();}
   if(v==='settings')loadSettingsUI();
   if(v==='editor')renderEditor();
+  if(v==='game'&&G.active)renderAll();
 }
 document.addEventListener('click',e=>{
   const n=e.target.closest('[data-view]');
@@ -219,6 +225,7 @@ function renderBoardInto(el,st,opt){
   const last=opt.last;
   const checkIdx=opt.check;
   const premove=opt.premove;
+  const moveIcon=opt.moveIcon;
   let html='';
   for(let vr=0;vr<8;vr++){
     for(let vf=0;vf<8;vf++){
@@ -246,6 +253,12 @@ function renderBoardInto(el,st,opt){
         const c=p===p.toUpperCase()?'w':'b';
         html+=`<span class="pc ${c}">${GLYPH[p.toLowerCase()]}</span>`;
       }
+      if(moveIcon && moveIcon.square === idx){
+        const lab = A.LABELS[moveIcon.label];
+        if(lab){
+          html += `<span class="move-label-icon" style="--lc:${lab.color}" title="${lab.text}">${lab.icon}</span>`;
+        }
+      }
       html+='</div>';
     }
   }
@@ -269,25 +282,14 @@ const G={
 function parseTC(s){const[a,b]=(s||'0|0').split('|').map(Number);return{base:a||0,inc:b||0};}
 function tcLabel(tc){if(!tc.base)return'Casual';return Math.round(tc.base/60000)+'+'+Math.round(tc.inc/1000);}
 
-/* --- Bot thinking delays per personality --- */
 const BOT_THINK = {
-  martin:   [250, 550],
-  nelson:   [300, 700],
-  duke:     [350, 800],
-  isabel:   [400, 900],
-  wally:    [250, 1600],
-  sven:     [600, 1200],
-  antonia:  [700, 1300],
-  mittens:  [200, 2000],
-  witty:    [500, 1100],
-  gotham:   [700, 1400],
-  fischer:  [800, 1600],
-  hikaru:   [400, 1000],
-  magnus:   [900, 1800],
-  stock:    [1000, 2000],
+  martin:[250,550], nelson:[300,700], duke:[350,800], isabel:[400,900],
+  wally:[250,1600], sven:[600,1200], antonia:[700,1300], mittens:[200,2000],
+  witty:[500,1100], gotham:[700,1400], fischer:[800,1600], hikaru:[400,1000],
+  magnus:[900,1800], stock:[1000,2000],
 };
 function getThinkDelay(bot, legalCount){
-  const range = BOT_THINK[bot.id] || [500, 1200];
+  const range = BOT_THINK[bot.id] || [500,1200];
   const base = range[0] + Math.random() * (range[1] - range[0]);
   const complexity = Math.min(legalCount * 30, 600) * Math.random();
   return Math.min(3000, Math.round(base + complexity));
@@ -302,13 +304,21 @@ function setThinking(on){
   if(pc) pc.classList.toggle('thinking', !!on);
   renderStatus();
 }
-
 function clearAIThinking(){
   if(aiTimeout){clearTimeout(aiTimeout);aiTimeout=null;}
   if(aiThinkCommentTimeout){clearTimeout(aiThinkCommentTimeout);aiThinkCommentTimeout=null;}
   G.thinking = false;
   const pc = $('#pcTop');
   if(pc) pc.classList.remove('thinking');
+}
+
+/* Returns true if we're in an online room whose opponent hasn't shown up yet */
+function isWaitingForOpponent(){
+  if (G.mode !== 'online') return false;
+  if (G.players.b.name === 'Waiting…') return true;
+  if (G.players.w.name === '—') return true;
+  if (G.players.b.name === '—') return true;
+  return false;
 }
 
 function startGame(o){
@@ -462,8 +472,7 @@ function renderStatus(){
     txt = botName + ' is thinking…';
   }
   if(G.mode==='online'){
-    if(G.players.b.name==='Waiting…') txt='Waiting for opponent…';
-    else if(G.players.w.name==='—' && G.players.b.name==='—') txt='Connecting to host…';
+    if(isWaitingForOpponent()) txt='Waiting for opponent to join…';
     else if(G.myColor&&G.st.turn!==G.myColor) txt+=' (opponent)';
   }
   if(G.mode==='spectate')txt='Spectating — '+side+' to move';
@@ -580,6 +589,8 @@ function clearGhost(){
 function attemptMove(from,to){
   if(!G.active||G.over)return false;
   if(G.mode==='spectate')return false;
+  // Block moves until opponent joins online room
+  if(isWaitingForOpponent()){toast('Waiting for opponent to join…');return false;}
   if(G.myColor&&G.st.turn!==G.myColor)return false;
   if(G.mode==='ai'&&G.myColor==='w'&&G.st.turn!=='w')return false;
   const legal=A.legalMoves(G.st);
@@ -593,6 +604,7 @@ function attemptMove(from,to){
 function handleTap(i){
   if(!G.active||G.over)return;
   if(G.mode==='spectate')return;
+  if(isWaitingForOpponent()){toast('Waiting for opponent to join…');return;}
   const myTurn=!G.myColor||G.st.turn===G.myColor;
   if(!myTurn){
     if(G.mode==='online'){
@@ -647,7 +659,8 @@ function showPromo(to){
 
 function commit(from,to,promo,fromPeer){
   if(G.over)return false;
-  // FIX: only block out-of-turn moves in ONLINE mode (was blocking AI too)
+  // Safety: block anything (except incoming peer moves) while waiting for opponent
+  if(G.mode==='online' && !fromPeer && isWaitingForOpponent()) return false;
   if(G.mode==='online' && !fromPeer && G.myColor && G.st.turn !== G.myColor) return false;
   const legal=A.legalMoves(G.st);
   const m=legal.find(x=>x.from===from&&x.to===to&&(promo?x.promo===promo:!x.promo));
@@ -708,16 +721,13 @@ function countRep(){
   return G.keys.filter(k=>k===last).length;
 }
 
-/* ============ AI: thinking delay + realistic feel ============ */
 function maybeAI(){
   if(!G.active || G.over || G.mode!=='ai') return;
-  if(G.st.turn === G.myColor) return;  // player's turn, nothing to do
-
+  if(G.st.turn === G.myColor) return;
   const bot = G.bot || {id:'medium', name:'Aurelius', depth:2, random:30, comments:{}};
   const legal = A.legalMoves(G.st);
   if(!legal.length) return;
 
-  // Compute move in background
   let best;
   try { best = A.findBestMoveV2(A.toFen(G.st), bot); }
   catch(e){ console.warn('AI error', e); return; }
@@ -726,7 +736,6 @@ function maybeAI(){
   const delay = getThinkDelay(bot, legal.length);
   setThinking(true);
 
-  // Sometimes mutter while thinking
   if(bot.comments && bot.comments.thinking && Math.random() < 0.35){
     aiThinkCommentTimeout = setTimeout(() => {
       if(!G.active || G.over) return;
@@ -737,15 +746,11 @@ function maybeAI(){
   aiTimeout = setTimeout(() => {
     if(!G.active || G.over) return;
     setThinking(false);
-
     const legalNow = A.legalMoves(G.st);
     const played = legalNow.find(x => x.from===best.from && x.to===best.to && (best.promo ? x.promo===best.promo : !x.promo));
     if(!played) return;
-
     const wasCapture = !!G.st.board[best.to];
     commit(best.from, best.to, best.promo, false);
-
-    // Post-move personality comments
     if(!G.over){
       if(bot.random > 100 && Math.random() < 0.1 && bot.comments.blunder){
         setTimeout(() => { if(G.active && !G.over) botSay(bot, 'blunder'); }, 600);
@@ -753,8 +758,6 @@ function maybeAI(){
         setTimeout(() => { if(G.active && !G.over) botSay(bot, 'great'); }, 600);
       }
     }
-
-    // Midgame taunt every ~5 moves
     if(G.moves.length >= 8 && G.moves.length % 10 < 2 && Math.random() < 0.5 && bot.comments.taunt){
       setTimeout(() => { if(G.active && !G.over) botSay(bot, 'taunt'); }, 1500);
     }
@@ -766,7 +769,6 @@ function botSay(bot, category){
   if(!bot || !bot.comments) return;
   const lines = bot.comments[category];
   if(!lines || !lines.length) return;
-  // Debounce: at most 1 bot comment every 1.8 seconds
   if(Date.now() - lastBotSayAt < 1800) return;
   lastBotSayAt = Date.now();
   const line = lines[Math.floor(Math.random() * lines.length)];
@@ -965,7 +967,6 @@ function hostRoom(){
       toast('Room '+code+' created — share the code!');
     }
   });
-  saveRecent(code);
 }
 let announceTimer=null;
 function startHostAnnounce(code,tc){
@@ -1003,7 +1004,6 @@ function joinRoom(code,role){
       }
     }
   });
-  saveRecent(code);
 }
 
 function onPeerHello(msg){
@@ -1024,20 +1024,10 @@ function onPeerHello(msg){
 function broadcastState(){
   if(!G.active)return;
   pubRoom({
-    t:'state',
-    fen:A.toFen(G.st),
-    moves:G.moves,
-    last:G.last,
-    turn:G.st.turn,
-    players:G.players,
-    status:G.over?'finished':'playing',
-    result:G.result,
-    reason:G.reason,
+    t:'state',fen:A.toFen(G.st),moves:G.moves,last:G.last,turn:G.st.turn,
+    players:G.players,status:G.over?'finished':'playing',result:G.result,reason:G.reason,
     clock:G.clock?{base:G.clock.base,inc:G.clock.inc,w:Math.round(clockRem('w')),b:Math.round(clockRem('b')),active:G.clock.active}:null,
-    rated:G.rated,
-    host:Profile.name,
-    hostAvatar:Profile.avatar,
-    spectators:Net.spectators
+    rated:G.rated,host:Profile.name,hostAvatar:Profile.avatar,spectators:Net.spectators
   });
 }
 
@@ -1169,21 +1159,6 @@ function renderLobby(){
   el.querySelectorAll('[data-join]').forEach(b=>{b.onclick=()=>{play('click');joinRoom(b.dataset.join,b.dataset.role);};});
 }
 
-function saveRecent(code){
-  let r=JSON.parse(localStorage.getItem('aur.recent')||'[]');
-  r=r.filter(x=>x.code!==code);r.unshift({code,ts:Date.now()});
-  localStorage.setItem('aur.recent',JSON.stringify(r.slice(0,6)));
-  renderRecent();
-}
-function renderRecent(){
-  const r=JSON.parse(localStorage.getItem('aur.recent')||'[]').filter(x=>Date.now()-x.ts<604800000);
-  const el=$('#recentRooms');if(!el)return;
-  if(!r.length){el.classList.add('hidden');return;}
-  el.classList.remove('hidden');
-  el.innerHTML='<div class="rr-label">Recent rooms</div>'+r.map(x=>`<div class="rr-item" data-r="${x.code}"><span class="rr-code">${x.code}</span><span>Tap to rejoin</span></div>`).join('');
-  el.querySelectorAll('[data-r]').forEach(x=>{x.onclick=()=>{play('click');joinRoom(x.dataset.r,'guest');};});
-}
-
 /* ============ PROFILE UI ============ */
 function renderUserChip(){
   const n=$('#ucName'),r=$('#ucRating'),a=$('#ucAvatar');
@@ -1254,19 +1229,44 @@ function applyTheme(){
 
 /* ============ ANALYSIS ============ */
 let AN={fens:[],sans:[],labels:[],evals:[],ply:0};
+
 function openAnalysis(){
   if(!G.moves.length){toast('Play a game first');return;}
   switchView('analyze');
   AN={fens:G.fens.slice(),sans:G.sans.slice(),labels:[],evals:[],ply:0};
-  buildAnMoves();toast('Analyzing…');
+  buildAnMoves();
+  toast('Analyzing…');
   setTimeout(()=>{
-    try{AN.labels=A.analyzeGame(G.startFen,G.moves,G.sans);AN.evals=AN.labels.map(l=>l.evalCp||0);}
-    catch(e){console.warn(e);AN.evals=new Array(AN.fens.length).fill(0);}
-    buildAnMoves();drawGraph();AN.ply=0;renderAnalysis();toast('Analysis complete');
-  },120);
+    try{
+      AN.labels = A.analyzeGame(G.startFen, G.moves, G.sans);
+      // Evals array must be one-per-POSITION, always from WHITE's perspective.
+      // Position 0 = start position; then one entry per half-move.
+      const startSt = A.parseFen(G.startFen);
+      const startEvalRaw = A.evaluate(startSt);
+      const startEval = startSt.turn === 'w' ? startEvalRaw : -startEvalRaw;
+      AN.evals = [startEval];
+      AN.labels.forEach((lab, i) => {
+        // lab.evalCp is from the mover's perspective; convert to white's
+        const isWhiteMove = (i % 2 === 0);
+        const whiteEval = isWhiteMove ? (lab.evalCp || 0) : -(lab.evalCp || 0);
+        AN.evals.push(whiteEval);
+      });
+    }catch(e){
+      console.warn('analyze', e);
+      AN.labels = [];
+      AN.evals = new Array(AN.fens.length).fill(0);
+    }
+    buildAnMoves();
+    drawGraph();
+    AN.ply = 0;
+    renderAnalysis();
+    toast('Analysis complete');
+  }, 120);
 }
+
 function buildAnMoves(){
-  const ul=$('#anMoves');let html='';
+  const ul=$('#anMoves');if(!ul)return;
+  let html='';
   for(let i=0;i<AN.sans.length;i+=2){
     const num=Math.floor(i/2)+1;
     html+=`<li><span class="num">${num}.</span>`;
@@ -1283,8 +1283,10 @@ function buildAnMoves(){
   ul.innerHTML=html;
   ul.querySelectorAll('[data-ply]').forEach(el=>{el.onclick=()=>{AN.ply=+el.dataset.ply;renderAnalysis();};});
 }
+
 function drawGraph(){
-  const cv=$('#evalGraph');const w=cv.clientWidth||300,h=90;
+  const cv=$('#evalGraph');if(!cv)return;
+  const w=cv.clientWidth||300,h=90;
   cv.width=w*2;cv.height=h*2;cv.style.height=h+'px';
   const ctx=cv.getContext('2d');ctx.setTransform(2,0,0,2,0,0);
   ctx.clearRect(0,0,w,h);ctx.fillStyle='#131626';ctx.fillRect(0,0,w,h);
@@ -1301,10 +1303,16 @@ function drawGraph(){
   ctx.strokeStyle='#d4af37';ctx.lineWidth=1.5;ctx.stroke();
   const px=x(AN.ply);ctx.strokeStyle='#f5d76e';ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,h);ctx.stroke();
 }
+
 function renderAnalysis(){
   const fen=AN.fens[AN.ply]||A.START_FEN;
   const st=A.parseFen(fen);
-  renderBoardInto($('#anBoard'),st,{flip:false,coords:SETTINGS.coords});
+  // Show chess.com-style label badge on the destination square of the move that led here
+  let moveIcon = null;
+  if(AN.ply > 0 && G.moves[AN.ply - 1] && AN.labels[AN.ply - 1]){
+    moveIcon = { square: G.moves[AN.ply - 1].to, label: AN.labels[AN.ply - 1].label };
+  }
+  renderBoardInto($('#anBoard'),st,{flip:false,coords:SETTINGS.coords,moveIcon});
   const cp=AN.evals[AN.ply]||0;
   $('#anEval').textContent=(cp>=0?'+':'')+(cp/100).toFixed(2);
   if(AN.evals.length)drawGraph();
@@ -1319,7 +1327,7 @@ function renderAnalysis(){
       if(best){
         $('#anBest').textContent='Best: '+A.sqToName(best.from)+'→'+A.sqToName(best.to);
         const st2=A.parseFen(fen);
-        renderBoardInto($('#anBoard'),st2,{flip:false,coords:SETTINGS.coords,hintFrom:best.from,hintTo:best.to});
+        renderBoardInto($('#anBoard'),st2,{flip:false,coords:SETTINGS.coords,hintFrom:best.from,hintTo:best.to,moveIcon});
       } else $('#anBest').textContent='Best: —';
     }catch(e){}
   },20);
@@ -1654,6 +1662,10 @@ function wire(){
   };
 
   window.addEventListener('resize',()=>{if(currentView==='analyze')drawGraph();});
+  // Refresh clock display when tab becomes visible again (browser throttles setInterval)
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden && G.active && G.clock) tick();
+  });
   $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')hideModal();});
 
   $('#homeStats').innerHTML=`
@@ -1661,7 +1673,6 @@ function wire(){
     <div class="s"><b>${Profile.games}</b><span>Games</span></div>
     <div class="s"><b>${Profile.wins}</b><span>Wins</span></div>
     <div class="s"><b>${PZ.best}</b><span>Puzzle streak</span></div>`;
-  renderRecent();
 }
 
 /* ============ INIT ============ */
@@ -1674,8 +1685,6 @@ function init(){
     const code=m[1].toUpperCase();
     setTimeout(()=>{if(Net.connected)joinRoom(code,'guest');else setTimeout(()=>joinRoom(code,'guest'),2000);},400);
   }
-  setTimeout(renderRecent,100);
-  setInterval(pruneLobby,5000);
 }
 
 init();
