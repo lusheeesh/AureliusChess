@@ -1,4 +1,4 @@
-/* AURELIUS ENGINE v3.3 — deeper bot personalities */
+/* AURELIUS ENGINE v3.4 — fixed book detection */
 (function (global) {
   'use strict';
 
@@ -426,286 +426,243 @@
     return sum;
   }
 
-  /* ============ BOTS v3.3 — expanded personalities ============ */
   const BOTS = [
-    {
-      id:'martin', name:'Martin', elo:250, displayElo:250, emoji:'🐭',
-      desc:'Beginner. Blunders often. Loves the game.',
-      depth:1, random:220,
+    { id:'martin', name:'Martin', elo:250, displayElo:250, emoji:'🐭', desc:'Beginner. Blunders often. Loves the game.', depth:1, random:220,
       comments:{
-        start:["Hi! I'm Martin!", "Let's have fun!", "I'm still learning!", "Be gentle with me!", "Okay, let's play!"],
-        check:["Oh no, check!", "Wait, am I in check?", "Oops, check.", "That's check? Oh no."],
-        myCheck:["Check! I think?", "Did I do that right?", "Check! Wow!", "Is this check?"],
-        capture:["Yay, I got a piece!", "Did I do that right?", "Ooh, a piece!", "Was that a blunder?"],
-        playerCapture:["Oof, that hurt!", "Oh no, my piece!", "Aww man.", "You got me!"],
-        win:["I won?! Really?!", "Wow, I won!", "Did I actually win?!", "Yay! I won!"],
-        lose:["Good game!", "You're too good!", "Teach me your ways!", "GG! Nice one."],
-        draw:["We drew! Fun!", "A draw! Good game!", "Nice, nobody lost!", "Even! Great game."],
-        mate:["I mated you?!", "Wow!", "Checkmate! I did it!", "Did I just win?!"],
-        thinking:["Hmm... what do I do?", "Let me think...", "Uh...", "Which piece again?", "So many choices..."],
-        blunder:["Oops!", "Oh no, that was bad.", "Was that a mistake?", "I'm still learning!", "Uh oh."],
-        great:["Yay!", "I did that?!", "Wow, good move me!", "Hey, that's nice!"],
-        taunt:["This is fun!", "Am I doing good?", "Chess is hard!", "How am I doing?", "I like this game."]
+        start:["Hi! I'm Martin!","Let's have fun!","I'm still learning!","Be gentle with me!","Okay, let's play!"],
+        check:["Oh no, check!","Wait, am I in check?","Oops, check.","That's check? Oh no."],
+        myCheck:["Check! I think?","Did I do that right?","Check! Wow!","Is this check?"],
+        capture:["Yay, I got a piece!","Did I do that right?","Ooh, a piece!","Was that a blunder?"],
+        playerCapture:["Oof, that hurt!","Oh no, my piece!","Aww man.","You got me!"],
+        win:["I won?! Really?!","Wow, I won!","Did I actually win?!","Yay! I won!"],
+        lose:["Good game!","You're too good!","Teach me your ways!","GG! Nice one."],
+        draw:["We drew! Fun!","A draw! Good game!","Nice, nobody lost!","Even! Great game."],
+        mate:["I mated you?!","Wow!","Checkmate! I did it!","Did I just win?!"],
+        thinking:["Hmm... what do I do?","Let me think...","Uh...","Which piece again?","So many choices..."],
+        blunder:["Oops!","Oh no, that was bad.","Was that a mistake?","I'm still learning!","Uh oh."],
+        great:["Yay!","I did that?!","Wow, good move me!","Hey, that's nice!"],
+        taunt:["This is fun!","Am I doing good?","Chess is hard!","How am I doing?","I like this game."]
       }
     },
-    {
-      id:'nelson', name:'Nelson', elo:1300, displayElo:1300, emoji:'🎩',
-      desc:'Loves the early queen attack.',
-      depth:2, random:70, aggression:1.6,
+    { id:'nelson', name:'Nelson', elo:1300, displayElo:1300, emoji:'🎩', desc:'Loves the early queen attack.', depth:2, random:70, aggression:1.6,
       comments:{
-        start:["My queen is coming!", "Watch out!", "Prepare yourself!", "Time for the queen!", "Here she comes!"],
-        check:["The queen strikes!", "Check!", "Queen attacks!", "She's here!"],
-        myCheck:["Queen's got you!", "Check!", "My queen strikes!", "Bow to the queen!"],
-        capture:["Gotcha!", "Queen takes!", "Mine now!", "The queen delivers.", "Ha!"],
-        playerCapture:["Hey! Not my queen!", "You took a pawn, big deal.", "Hmph.", "Watch out for my queen!", "Rude!"],
-        win:["The queen prevails!", "Victory!", "Queen always wins!", "Told you!", "The queen reigns!"],
-        lose:["You got my queen?!", "Noooo!", "How?!", "The queen has fallen...", "Impossible!"],
-        draw:["A draw. Fine.", "We're even.", "Next time, my queen wins.", "Fair enough.", "Hmph."],
-        mate:["Queen's mate!", "Checkmate!", "The queen delivers!", "Game over!"],
-        thinking:["Where can my queen go?", "Queen move...", "Let me find the best queen move.", "Queen time.", "Queen queen queen..."],
-        blunder:["My queen?!", "No!", "How did I miss that?", "Ugh.", "That's not good."],
-        great:["Queen!", "The queen!", "Beautiful queen move!", "Ha!"],
-        taunt:["My queen is coming.", "Are you ready for the queen?", "The queen hungers.", "Just wait for my queen.", "Queen. Queen. Queen."]
+        start:["My queen is coming!","Watch out!","Prepare yourself!","Time for the queen!","Here she comes!"],
+        check:["The queen strikes!","Check!","Queen attacks!","She's here!"],
+        myCheck:["Queen's got you!","Check!","My queen strikes!","Bow to the queen!"],
+        capture:["Gotcha!","Queen takes!","Mine now!","The queen delivers.","Ha!"],
+        playerCapture:["Hey! Not my queen!","You took a pawn, big deal.","Hmph.","Watch out for my queen!","Rude!"],
+        win:["The queen prevails!","Victory!","Queen always wins!","Told you!","The queen reigns!"],
+        lose:["You got my queen?!","Noooo!","How?!","The queen has fallen...","Impossible!"],
+        draw:["A draw. Fine.","We're even.","Next time, my queen wins.","Fair enough.","Hmph."],
+        mate:["Queen's mate!","Checkmate!","The queen delivers!","Game over!"],
+        thinking:["Where can my queen go?","Queen move...","Let me find the best queen move.","Queen time.","Queen queen queen..."],
+        blunder:["My queen?!","No!","How did I miss that?","Ugh.","That's not good."],
+        great:["Queen!","The queen!","Beautiful queen move!","Ha!"],
+        taunt:["My queen is coming.","Are you ready for the queen?","The queen hungers.","Just wait for my queen.","Queen. Queen. Queen."]
       }
     },
-    {
-      id:'duke', name:'Duke', elo:1500, displayElo:1500, emoji:'⚔️',
-      desc:'Aggressive attacker. Never defends.',
-      depth:2, random:55, aggression:1.3,
+    { id:'duke', name:'Duke', elo:1500, displayElo:1500, emoji:'⚔️', desc:'Aggressive attacker. Never defends.', depth:2, random:55, aggression:1.3,
       comments:{
-        start:["Let's attack!", "To battle!", "Attack, attack, attack!", "No time for defense!", "Charge!"],
-        check:["Your king is mine!", "Attack!", "Charge!", "Forward!"],
-        myCheck:["Strike!", "Forward!", "Attack!", "The king falls!"],
-        capture:["Victory!", "Another piece falls!", "Attack succeeds!", "Yes!", "Boom!"],
-        playerCapture:["A setback.", "I'll recover.", "You dare?", "Focus!", "Hmph."],
-        win:["Victorious!", "Attack succeeds!", "Forward to victory!", "Yes!", "Victory is mine!"],
-        lose:["Well fought.", "You defended well.", "Next time I attack harder.", "The battle is lost.", "Hmph."],
-        draw:["A stalemate.", "Neither wins.", "A truce.", "The battle rages on.", "Fine."],
-        mate:["Checkmate!", "Victory is mine!", "Attack pays off!", "The king falls!"],
-        thinking:["Attack where?", "Find the weakness.", "Prepare the strike.", "Charge!", "Where's the kill?"],
-        blunder:["I miscalculated.", "The attack failed.", "Too reckless.", "Hmph.", "Ugh."],
-        great:["Victory!", "Attack!", "The king falls!", "Boom!"],
-        taunt:["Defense is boring.", "Attack wins games!", "Where's your defense?", "I never stop attacking.", "Feel the pressure!"]
+        start:["Let's attack!","To battle!","Attack, attack, attack!","No time for defense!","Charge!"],
+        check:["Your king is mine!","Attack!","Charge!","Forward!"],
+        myCheck:["Strike!","Forward!","Attack!","The king falls!"],
+        capture:["Victory!","Another piece falls!","Attack succeeds!","Yes!","Boom!"],
+        playerCapture:["A setback.","I'll recover.","You dare?","Focus!","Hmph."],
+        win:["Victorious!","Attack succeeds!","Forward to victory!","Yes!","Victory is mine!"],
+        lose:["Well fought.","You defended well.","Next time I attack harder.","The battle is lost.","Hmph."],
+        draw:["A stalemate.","Neither wins.","A truce.","The battle rages on.","Fine."],
+        mate:["Checkmate!","Victory is mine!","Attack pays off!","The king falls!"],
+        thinking:["Attack where?","Find the weakness.","Prepare the strike.","Charge!","Where's the kill?"],
+        blunder:["I miscalculated.","The attack failed.","Too reckless.","Hmph.","Ugh."],
+        great:["Victory!","Attack!","The king falls!","Boom!"],
+        taunt:["Defense is boring.","Attack wins games!","Where's your defense?","I never stop attacking.","Feel the pressure!"]
       }
     },
-    {
-      id:'isabel', name:'Isabel', elo:1600, displayElo:1600, emoji:'👑',
-      desc:'Solid positional player.',
-      depth:2, random:35,
+    { id:'isabel', name:'Isabel', elo:1600, displayElo:1600, emoji:'👑', desc:'Solid positional player.', depth:2, random:35,
       comments:{
-        start:["Let's play well.", "Position first.", "Calmly.", "Steady play.", "Good luck."],
-        check:["Check. Steady.", "Your king is exposed.", "Check.", "Carefully."],
-        myCheck:["Check.", "A small advantage.", "Pressure.", "Progress."],
-        capture:["A small gain.", "Material first.", "Correct.", "Progress.", "Good."],
-        playerCapture:["Hmm.", "I'll adjust.", "Noted.", "Acceptable trade.", "Fine."],
-        win:["Position prevailed.", "Good game.", "As expected.", "Steady wins.", "Well played."],
-        lose:["Well played.", "You earned it.", "You were better.", "Respect.", "Good game."],
-        draw:["A fair draw.", "Balanced game.", "Equilibrium.", "Well matched.", "Fair."],
-        mate:["Checkmate.", "The position delivered.", "Precisely.", "As planned."],
-        thinking:["What's the best move?", "Positional considerations...", "Calmly.", "Slow and steady.", "Consider."],
-        blunder:["An oversight.", "That was inaccurate.", "Interesting.", "I'll recover.", "Hmm."],
-        great:["Correct.", "Good position.", "Progress.", "Precisely."],
-        taunt:["Slowly does it.", "The position is fine.", "Just a small advantage.", "Position matters.", "Patience."]
+        start:["Let's play well.","Position first.","Calmly.","Steady play.","Good luck."],
+        check:["Check. Steady.","Your king is exposed.","Check.","Carefully."],
+        myCheck:["Check.","A small advantage.","Pressure.","Progress."],
+        capture:["A small gain.","Material first.","Correct.","Progress.","Good."],
+        playerCapture:["Hmm.","I'll adjust.","Noted.","Acceptable trade.","Fine."],
+        win:["Position prevailed.","Good game.","As expected.","Steady wins.","Well played."],
+        lose:["Well played.","You earned it.","You were better.","Respect.","Good game."],
+        draw:["A fair draw.","Balanced game.","Equilibrium.","Well matched.","Fair."],
+        mate:["Checkmate.","The position delivered.","Precisely.","As planned."],
+        thinking:["What's the best move?","Positional considerations...","Calmly.","Slow and steady.","Consider."],
+        blunder:["An oversight.","That was inaccurate.","Interesting.","I'll recover.","Hmm."],
+        great:["Correct.","Good position.","Progress.","Precisely."],
+        taunt:["Slowly does it.","The position is fine.","Just a small advantage.","Position matters.","Patience."]
       }
     },
-    {
-      id:'wally', name:'Wally', elo:1800, displayElo:1800, emoji:'🤡',
-      desc:'Tricky and unpredictable.',
-      depth:2, random:25,
+    { id:'wally', name:'Wally', elo:1800, displayElo:1800, emoji:'🤡', desc:'Tricky and unpredictable.', depth:2, random:25,
       comments:{
-        start:["Hehehe...", "Let's have some fun!", "Surprise incoming!", "Ready for a trick?", "Watch this!"],
-        check:["Surprise check!", "Gotcha!", "Didn't see that?", "Hehe!"],
-        myCheck:["Prank!", "Unexpected?", "Check!", "Trick!"],
-        capture:["Hehe!", "Didn't see that coming?", "Gotcha!", "Trick!", "Surprise!"],
-        playerCapture:["Oh, you got me!", "Nice trick!", "Well done!", "Hmph. Not bad.", "Interesting!"],
-        win:["Ha! Victory!", "Gotcha!", "Tricked ya!", "Wally wins!", "Hehehe!"],
-        lose:["Aww, you beat me!", "Great trick!", "Well played!", "You got me!", "Nice one!"],
-        draw:["A draw? Boring!", "Next time!", "Neither fooled?", "Hmph.", "Fine."],
-        mate:["Tricked ya!", "Checkmate!", "The final prank!", "Hehe!"],
-        thinking:["What's the tricky move?", "Hehe...", "Something surprising...", "What would fool them?", "Hmm..."],
-        blunder:["Oops! Hehe.", "That backfired.", "Uh oh.", "My bad.", "Hehe... oops."],
-        great:["Tricked ya!", "Hehe!", "Surprise!", "Gotcha!"],
-        taunt:["Hehe. Something coming.", "Watch out!", "Let's see what happens.", "The trick is coming.", "Don't trust me."]
+        start:["Hehehe...","Let's have some fun!","Surprise incoming!","Ready for a trick?","Watch this!"],
+        check:["Surprise check!","Gotcha!","Didn't see that?","Hehe!"],
+        myCheck:["Prank!","Unexpected?","Check!","Trick!"],
+        capture:["Hehe!","Didn't see that coming?","Gotcha!","Trick!","Surprise!"],
+        playerCapture:["Oh, you got me!","Nice trick!","Well done!","Hmph. Not bad.","Interesting!"],
+        win:["Ha! Victory!","Gotcha!","Tricked ya!","Wally wins!","Hehehe!"],
+        lose:["Aww, you beat me!","Great trick!","Well played!","You got me!","Nice one!"],
+        draw:["A draw? Boring!","Next time!","Neither fooled?","Hmph.","Fine."],
+        mate:["Tricked ya!","Checkmate!","The final prank!","Hehe!"],
+        thinking:["What's the tricky move?","Hehe...","Something surprising...","What would fool them?","Hmm..."],
+        blunder:["Oops! Hehe.","That backfired.","Uh oh.","My bad.","Hehe... oops."],
+        great:["Tricked ya!","Hehe!","Surprise!","Gotcha!"],
+        taunt:["Hehe. Something coming.","Watch out!","Let's see what happens.","The trick is coming.","Don't trust me."]
       }
     },
-    {
-      id:'sven', name:'Sven', elo:2000, displayElo:2000, emoji:'🧔',
-      desc:'Balanced club player.',
-      depth:3, random:15,
+    { id:'sven', name:'Sven', elo:2000, displayElo:2000, emoji:'🧔', desc:'Balanced club player.', depth:3, random:15,
       comments:{
-        start:["Let's play.", "Good luck.", "Steady game.", "Well met.", "Let's begin."],
-        check:["Check.", "Mind your king.", "Careful.", "Check."],
-        myCheck:["Check.", "Progress.", "Good position.", "Check."],
-        capture:["A trade.", "Good.", "Material.", "Correct.", "Yes."],
-        playerCapture:["Fine trade.", "Understood.", "Reasonable.", "Noted.", "Okay."],
-        win:["Good game.", "Well played.", "Victory.", "Steady progress.", "GG."],
-        lose:["You played better.", "Good win.", "Well done.", "Understood.", "GG."],
-        draw:["Fair result.", "Balanced.", "A fair game.", "Until next time.", "GG."],
-        mate:["Checkmate.", "Well played.", "As planned.", "Victory."],
-        thinking:["Consider the position.", "Calculate.", "Options...", "Let me think.", "Hmm."],
-        blunder:["An error.", "Inaccurate.", "I'll adjust.", "Hmm.", "Not ideal."],
-        great:["Good move.", "Precise.", "Correct.", "Yes."],
-        taunt:["Steady as she goes.", "Just a game.", "Position matters.", "Calculated.", "Let's continue."]
+        start:["Let's play.","Good luck.","Steady game.","Well met.","Let's begin."],
+        check:["Check.","Mind your king.","Careful.","Check."],
+        myCheck:["Check.","Progress.","Good position.","Check."],
+        capture:["A trade.","Good.","Material.","Correct.","Yes."],
+        playerCapture:["Fine trade.","Understood.","Reasonable.","Noted.","Okay."],
+        win:["Good game.","Well played.","Victory.","Steady progress.","GG."],
+        lose:["You played better.","Good win.","Well done.","Understood.","GG."],
+        draw:["Fair result.","Balanced.","A fair game.","Until next time.","GG."],
+        mate:["Checkmate.","Well played.","As planned.","Victory."],
+        thinking:["Consider the position.","Calculate.","Options...","Let me think.","Hmm."],
+        blunder:["An error.","Inaccurate.","I'll adjust.","Hmm.","Not ideal."],
+        great:["Good move.","Precise.","Correct.","Yes."],
+        taunt:["Steady as she goes.","Just a game.","Position matters.","Calculated.","Let's continue."]
       }
     },
-    {
-      id:'antonia', name:'Antonia', elo:2200, displayElo:2200, emoji:'🎭',
-      desc:'Patient and precise.',
-      depth:3, random:10,
+    { id:'antonia', name:'Antonia', elo:2200, displayElo:2200, emoji:'🎭', desc:'Patient and precise.', depth:3, random:10,
       comments:{
-        start:["Patience.", "Positional game.", "Let's think.", "Careful.", "Slowly."],
-        check:["A small squeeze.", "Check.", "Pressure.", "Steadily.", "Precisely."],
-        myCheck:["Pressure.", "Progress.", "Check.", "Deliberately.", "Carefully."],
-        capture:["Material.", "Correct.", "Expected.", "Calculated.", "Good."],
-        playerCapture:["Interesting.", "Noted.", "Fine.", "Understood.", "Reasonable."],
-        win:["Position delivered.", "Good game.", "Precision.", "As expected.", "Well played."],
-        lose:["Well played. Precise.", "You deserved it.", "You were better.", "Respect.", "GG."],
-        draw:["Balanced.", "A fair draw.", "Well matched.", "Precise.", "Fair."],
-        mate:["Checkmate.", "Precise.", "Delivered.", "As planned."],
-        thinking:["Consider options...", "Slowly...", "Precisely...", "Calculate.", "Patience..."],
-        blunder:["Inaccurate.", "Not ideal.", "A miscalculation.", "Noted.", "Hmm."],
-        great:["Precise.", "Correct.", "The best move.", "Yes."],
-        taunt:["Patience is key.", "Position by position.", "Just a small edge.", "Slowly.", "Deliberately."]
+        start:["Patience.","Positional game.","Let's think.","Careful.","Slowly."],
+        check:["A small squeeze.","Check.","Pressure.","Steadily.","Precisely."],
+        myCheck:["Pressure.","Progress.","Check.","Deliberately.","Carefully."],
+        capture:["Material.","Correct.","Expected.","Calculated.","Good."],
+        playerCapture:["Interesting.","Noted.","Fine.","Understood.","Reasonable."],
+        win:["Position delivered.","Good game.","Precision.","As expected.","Well played."],
+        lose:["Well played. Precise.","You deserved it.","You were better.","Respect.","GG."],
+        draw:["Balanced.","A fair draw.","Well matched.","Precise.","Fair."],
+        mate:["Checkmate.","Precise.","Delivered.","As planned."],
+        thinking:["Consider options...","Slowly...","Precisely...","Calculate.","Patience..."],
+        blunder:["Inaccurate.","Not ideal.","A miscalculation.","Noted.","Hmm."],
+        great:["Precise.","Correct.","The best move.","Yes."],
+        taunt:["Patience is key.","Position by position.","Just a small edge.","Slowly.","Deliberately."]
       }
     },
-    {
-      id:'mittens', name:'Mittens', elo:2500, displayElo:1, emoji:'🐱',
-      desc:'Rating says 1. It\'s lying.',
-      depth:3, random:8, aggression:1.3,
+    { id:'mittens', name:'Mittens', elo:2500, displayElo:1, emoji:'🐱', desc:'Rating says 1. It\'s lying.', depth:3, random:8, aggression:1.3,
       comments:{
-        start:["Meow. Let's play, human.", "Purr... I smell fish.", "Ready to lose?", "I woke up from a nap for this?", "Human. Bow before me. Meow."],
-        check:["Check. Meow.", "Purr-tect your king.", "Check, human. Purr.", "Your king is exposed. Meow."],
-        myCheck:["Check, human. Meow.", "I have you now.", "Check. Purr.", "Run, little king."],
-        capture:["Yum. That piece was tasty.", "Meow. Got it.", "Purr. Mine now.", "Delicious.", "Nom nom."],
-        playerCapture:["Ouch, human. That stung.", "Meow. Fine.", "Hmph. Not bad.", "You got my piece? Rude.", "Hiss."],
-        win:["Meow. Victory is purr-fect.", "Better luck next time, human.", "Bow to your feline overlord.", "Purr. That was easy.", "Meow. As expected."],
-        lose:["Meow... you were good.", "Fine. You win, human.", "I let you win. Purr.", "Next time I won't nap.", "Purr. Respect, human."],
-        draw:["A draw. How boring. Meow.", "Neither of us wins. Purr.", "Stalemate. How disappointing.", "Purr. We're even.", "Meow. Boring."],
-        mate:["Checkmate. Meow.", "Purr-fect mate.", "Game over, human. Meow.", "Purr. Bow."],
-        thinking:["Hmm... purr...", "Let me think, meow.", "Calculating... purr...", "What would a cat do?", "Purr... considering..."],
-        blunder:["Oops. Meow.", "Purr. That was on purpose.", "Hiss. Miscalculation.", "Meow. Blame the laser pointer.", "Purr. Oops."],
-        great:["Purr-fect!", "Meow. Brilliant.", "As expected of a cat.", "Purr. Now what, human?", "Meow!"],
-        taunt:["Purr. You're still here?", "Meow. I'm getting bored.", "Should I start napping?", "Human, is this your best?", "Purr. I could do this blindfolded."]
+        start:["Meow. Let's play, human.","Purr... I smell fish.","Ready to lose?","I woke up from a nap for this?","Human. Bow before me. Meow."],
+        check:["Check. Meow.","Purr-tect your king.","Check, human. Purr.","Your king is exposed. Meow."],
+        myCheck:["Check, human. Meow.","I have you now.","Check. Purr.","Run, little king."],
+        capture:["Yum. That piece was tasty.","Meow. Got it.","Purr. Mine now.","Delicious.","Nom nom."],
+        playerCapture:["Ouch, human. That stung.","Meow. Fine.","Hmph. Not bad.","You got my piece? Rude.","Hiss."],
+        win:["Meow. Victory is purr-fect.","Better luck next time, human.","Bow to your feline overlord.","Purr. That was easy.","Meow. As expected."],
+        lose:["Meow... you were good.","Fine. You win, human.","I let you win. Purr.","Next time I won't nap.","Purr. Respect, human."],
+        draw:["A draw. How boring. Meow.","Neither of us wins. Purr.","Stalemate. How disappointing.","Purr. We're even.","Meow. Boring."],
+        mate:["Checkmate. Meow.","Purr-fect mate.","Game over, human. Meow.","Purr. Bow."],
+        thinking:["Hmm... purr...","Let me think, meow.","Calculating... purr...","What would a cat do?","Purr... considering..."],
+        blunder:["Oops. Meow.","Purr. That was on purpose.","Hiss. Miscalculation.","Meow. Blame the laser pointer.","Purr. Oops."],
+        great:["Purr-fect!","Meow. Brilliant.","As expected of a cat.","Purr. Now what, human?","Meow!"],
+        taunt:["Purr. You're still here?","Meow. I'm getting bored.","Should I start napping?","Human, is this your best?","Purr. I could do this blindfolded."]
       }
     },
-    {
-      id:'witty', name:'Witty Alien', elo:2600, displayElo:2600, emoji:'👽',
-      desc:'Out of this world tactics.',
-      depth:3, random:6,
+    { id:'witty', name:'Witty Alien', elo:2600, displayElo:2600, emoji:'👽', desc:'Out of this world tactics.', depth:3, random:6,
       comments:{
-        start:["Earthling, prepare!", "Take me to your king!", "Zorg approves.", "Earth chess. Interesting.", "Beep boop. Let's play."],
-        check:["Zap!", "Earthling king in danger!", "Zorg said check.", "Green lasers!"],
-        myCheck:["Zap zap!", "Check!", "Earthling, your king falls.", "Laser beam!"],
-        capture:["Beam me that piece!", "Acquired!", "Zapped!", "Mine now, earthling.", "Teleported!"],
-        playerCapture:["Impressive, earthling.", "That stings!", "Zorg is disappointed.", "How?", "Beep. Error."],
-        win:["Zorg victorious!", "Earth conquered!", "The galaxy wins!", "Take me to your loser!", "Beep boop. Win."],
-        lose:["You win, earthling.", "Until next time.", "Earth is safe... for now.", "Zorg will return.", "Beep. Defeat."],
-        draw:["A truce.", "We meet again.", "The galaxy is balanced.", "Zorg is confused.", "Beep. Even."],
-        mate:["Checkmate, earthling!", "Zap!", "Take me to your king!", "Earth conquered!"],
-        thinking:["Zorg computes...", "Analyzing earthling moves...", "Beep boop.", "Green lasers considering...", "Earthling patterns..."],
-        blunder:["Zorg miscalculated.", "Beep. Error.", "Rebooting...", "Inconceivable.", "Zorg is sad."],
-        great:["Zap!", "Zorg approves.", "Earthling, witness!", "Beep boop!"],
-        taunt:["Earth chess is easy.", "Zorg is bored.", "Come on, earthling.", "Green lasers await.", "Take me to your leader!"]
+        start:["Earthling, prepare!","Take me to your king!","Zorg approves.","Earth chess. Interesting.","Beep boop. Let's play."],
+        check:["Zap!","Earthling king in danger!","Zorg said check.","Green lasers!"],
+        myCheck:["Zap zap!","Check!","Earthling, your king falls.","Laser beam!"],
+        capture:["Beam me that piece!","Acquired!","Zapped!","Mine now, earthling.","Teleported!"],
+        playerCapture:["Impressive, earthling.","That stings!","Zorg is disappointed.","How?","Beep. Error."],
+        win:["Zorg victorious!","Earth conquered!","The galaxy wins!","Take me to your loser!","Beep boop. Win."],
+        lose:["You win, earthling.","Until next time.","Earth is safe... for now.","Zorg will return.","Beep. Defeat."],
+        draw:["A truce.","We meet again.","The galaxy is balanced.","Zorg is confused.","Beep. Even."],
+        mate:["Checkmate, earthling!","Zap!","Take me to your king!","Earth conquered!"],
+        thinking:["Zorg computes...","Analyzing earthling moves...","Beep boop.","Green lasers considering...","Earthling patterns..."],
+        blunder:["Zorg miscalculated.","Beep. Error.","Rebooting...","Inconceivable.","Zorg is sad."],
+        great:["Zap!","Zorg approves.","Earthling, witness!","Beep boop!"],
+        taunt:["Earth chess is easy.","Zorg is bored.","Come on, earthling.","Green lasers await.","Take me to your leader!"]
       }
     },
-    {
-      id:'gotham', name:'GothamChess', elo:2700, displayElo:2700, emoji:'🗽',
-      desc:'The Levy. Shows no mercy.',
-      depth:3, random:4, aggression:1.3,
+    { id:'gotham', name:'GothamChess', elo:2700, displayElo:2700, emoji:'🗽', desc:'The Levy. Shows no mercy.', depth:3, random:4, aggression:1.3,
       comments:{
-        start:["Let's see what you've got.", "Time for the rook!", "Show me the moves.", "Game time!", "Let's go!"],
-        check:["That's check!", "Pressure!", "Come on!", "The rook comes!", "Yes!"],
-        myCheck:["The rook comes!", "Check!", "Let's go!", "Boom!"],
-        capture:["And that's a brilliant trade!", "Classic.", "Boom!", "Got it!", "Yes!"],
-        playerCapture:["Oh no, don't do that!", "Ouch.", "Wait, what?", "Interesting!", "Hmm."],
-        win:["GG, that was clean.", "Not even close.", "That's the rook!", "Easy!", "GG!"],
-        lose:["OK, you got me.", "Nice moves.", "GG.", "Well played.", "Respect."],
-        draw:["A draw. Next time.", "Even.", "Fine.", "GG.", "Hmph."],
-        mate:["Checkmate. That's the rook!", "Done!", "GG!", "Rook!", "Boom!"],
-        thinking:["Hmm, the rook or...", "Let's calculate.", "Where's the attack?", "Come on come on...", "Let me think."],
-        blunder:["Oh no.", "That's a blunder!", "Wait wait wait.", "Ugh.", "No way."],
-        great:["That's the rook!", "Brilliant!", "BOOM!", "Classic!", "Yes!"],
-        taunt:["Where's the attack?", "Come on!", "Let's go!", "More pressure!", "The rook is coming."]
+        start:["Let's see what you've got.","Time for the rook!","Show me the moves.","Game time!","Let's go!"],
+        check:["That's check!","Pressure!","Come on!","The rook comes!","Yes!"],
+        myCheck:["The rook comes!","Check!","Let's go!","Boom!"],
+        capture:["And that's a brilliant trade!","Classic.","Boom!","Got it!","Yes!"],
+        playerCapture:["Oh no, don't do that!","Ouch.","Wait, what?","Interesting!","Hmm."],
+        win:["GG, that was clean.","Not even close.","That's the rook!","Easy!","GG!"],
+        lose:["OK, you got me.","Nice moves.","GG.","Well played.","Respect."],
+        draw:["A draw. Next time.","Even.","Fine.","GG.","Hmph."],
+        mate:["Checkmate. That's the rook!","Done!","GG!","Rook!","Boom!"],
+        thinking:["Hmm, the rook or...","Let's calculate.","Where's the attack?","Come on come on...","Let me think."],
+        blunder:["Oh no.","That's a blunder!","Wait wait wait.","Ugh.","No way."],
+        great:["That's the rook!","Brilliant!","BOOM!","Classic!","Yes!"],
+        taunt:["Where's the attack?","Come on!","Let's go!","More pressure!","The rook is coming."]
       }
     },
-    {
-      id:'fischer', name:'Bobby Fischer', elo:2785, displayElo:2785, emoji:'👤',
-      desc:'11th World Champion. Best by test.',
-      depth:4, random:1, aggression:1.2,
+    { id:'fischer', name:'Bobby Fischer', elo:2785, displayElo:2785, emoji:'👤', desc:'11th World Champion. Best by test.', depth:4, random:1, aggression:1.2,
       comments:{
-        start:["Best by test.", "Let's play chess.", "You should be honored.", "Prepare yourself.", "Time to play."],
-        check:["Check. Best by test.", "Feel the pressure.", "Check.", "Squeeze.", "As planned."],
-        myCheck:["Check.", "As expected.", "The pressure builds.", "Check.", "Precisely."],
-        capture:["Material is material.", "Yes.", "Correct.", "Expected.", "Of course."],
-        playerCapture:["Noted. It won't help.", "A minor setback.", "Fine.", "Expected.", "Interesting."],
-        win:["I knew I'd win. Best by test.", "Good game. Predictable.", "As planned.", "Best by test.", "Of course."],
-        lose:["Good game. You earned that.", "Best by test... for you.", "You were better.", "Interesting.", "Respect."],
-        draw:["A draw. How boring.", "Fine. Even.", "Unsatisfying.", "Acceptable.", "Hmph."],
-        mate:["Checkmate. As expected.", "Checkmate. Best by test.", "As planned.", "Predictable.", "Yes."],
-        thinking:["Precise calculation.", "Best by test.", "Consider every move.", "Calculate.", "Think."],
-        blunder:["Impossible.", "A miscalculation.", "That shouldn't happen.", "Interesting.", "No."],
-        great:["Best by test.", "As expected.", "Correct.", "Yes."],
-        taunt:["Best by test.", "This is chess.", "You should be honored.", "Predictable.", "I've seen this before."]
+        start:["Best by test.","Let's play chess.","You should be honored.","Prepare yourself.","Time to play."],
+        check:["Check. Best by test.","Feel the pressure.","Check.","Squeeze.","As planned."],
+        myCheck:["Check.","As expected.","The pressure builds.","Check.","Precisely."],
+        capture:["Material is material.","Yes.","Correct.","Expected.","Of course."],
+        playerCapture:["Noted. It won't help.","A minor setback.","Fine.","Expected.","Interesting."],
+        win:["I knew I'd win. Best by test.","Good game. Predictable.","As planned.","Best by test.","Of course."],
+        lose:["Good game. You earned that.","Best by test... for you.","You were better.","Interesting.","Respect."],
+        draw:["A draw. How boring.","Fine. Even.","Unsatisfying.","Acceptable.","Hmph."],
+        mate:["Checkmate. As expected.","Checkmate. Best by test.","As planned.","Predictable.","Yes."],
+        thinking:["Precise calculation.","Best by test.","Consider every move.","Calculate.","Think."],
+        blunder:["Impossible.","A miscalculation.","That shouldn't happen.","Interesting.","No."],
+        great:["Best by test.","As expected.","Correct.","Yes."],
+        taunt:["Best by test.","This is chess.","You should be honored.","Predictable.","I've seen this before."]
       }
     },
-    {
-      id:'hikaru', name:'Hikaru', elo:2800, displayElo:2800, emoji:'⚡',
-      desc:'Blitz speed, bullet brain.',
-      depth:4, random:2, aggression:1.2,
+    { id:'hikaru', name:'Hikaru', elo:2800, displayElo:2800, emoji:'⚡', desc:'Blitz speed, bullet brain.', depth:4, random:2, aggression:1.2,
       comments:{
-        start:["Let's go!", "Speed chess!", "GG!", "Come on!", "Here we go!"],
-        check:["Check!", "Come on!", "GG!", "Pressure!", "Yes!"],
-        myCheck:["Check!", "Pressure!", "Yes!", "Let's go!", "Boom!"],
-        capture:["Got it!", "GG!", "Boom!", "Yes!", "Nice."],
-        playerCapture:["Oh, nice!", "Interesting!", "Wow!", "OK OK.", "Good one."],
-        win:["GG!", "That was fast!", "Too easy!", "GG.", "Let's go!"],
-        lose:["GG, well played!", "Respect.", "Wow, nice.", "You got me.", "GG."],
-        draw:["Draw. GG.", "Even. GG.", "Fine. GG.", "GG.", "Fair."],
-        mate:["Checkmate! GG!", "Game!", "GG!", "Let's go!", "Done!"],
-        thinking:["Come on come on...", "Fast fast fast.", "Let's go!", "Where's the move?", "Speed chess!"],
-        blunder:["Oh!", "Wait!", "No way!", "Hmm.", "Ugh."],
-        great:["Boom!", "Yes!", "GG!", "Let's go!"],
-        taunt:["Come on!", "Speed it up!", "Let's go!", "GG!", "Faster!"]
+        start:["Let's go!","Speed chess!","GG!","Come on!","Here we go!"],
+        check:["Check!","Come on!","GG!","Pressure!","Yes!"],
+        myCheck:["Check!","Pressure!","Yes!","Let's go!","Boom!"],
+        capture:["Got it!","GG!","Boom!","Yes!","Nice."],
+        playerCapture:["Oh, nice!","Interesting!","Wow!","OK OK.","Good one."],
+        win:["GG!","That was fast!","Too easy!","GG.","Let's go!"],
+        lose:["GG, well played!","Respect.","Wow, nice.","You got me.","GG."],
+        draw:["Draw. GG.","Even. GG.","Fine. GG.","GG.","Fair."],
+        mate:["Checkmate! GG!","Game!","GG!","Let's go!","Done!"],
+        thinking:["Come on come on...","Fast fast fast.","Let's go!","Where's the move?","Speed chess!"],
+        blunder:["Oh!","Wait!","No way!","Hmm.","Ugh."],
+        great:["Boom!","Yes!","GG!","Let's go!"],
+        taunt:["Come on!","Speed it up!","Let's go!","GG!","Faster!"]
       }
     },
-    {
-      id:'magnus', name:'Magnus', elo:2850, displayElo:2850, emoji:'🏆',
-      desc:'The World Champion.',
-      depth:4, random:0,
+    { id:'magnus', name:'Magnus', elo:2850, displayElo:2850, emoji:'🏆', desc:'The World Champion.', depth:4, random:0,
       comments:{
-        start:["Let's play.", "Interesting.", "Good luck.", "Well met.", "Let's begin."],
-        check:["Check.", "Pressure.", "Interesting.", "Consider.", "Yes."],
-        myCheck:["Check.", "Progress.", "Slowly.", "Consider.", "Yes."],
-        capture:["Material.", "Good.", "Expected.", "Fine.", "Yes."],
-        playerCapture:["Interesting choice.", "Noted.", "Fine.", "Reasonable.", "Hmm."],
-        win:["Good game.", "Well played.", "Interesting.", "As expected.", "GG."],
-        lose:["You were better today.", "Respect.", "Well played.", "You earned it.", "GG."],
-        draw:["A fair draw.", "Balanced.", "Well matched.", "Fine.", "Fair."],
-        mate:["Checkmate.", "Well played.", "Delivered.", "As planned.", "Yes."],
-        thinking:["Consider all options.", "Interesting position.", "Calculate.", "Hmm.", "Think."],
-        blunder:["Interesting.", "A mistake.", "Not ideal.", "Hmm.", "Noted."],
-        great:["Good move.", "Interesting.", "Precise.", "Yes."],
-        taunt:["Interesting.", "Consider.", "Position matters.", "Slowly.", "Well played so far."]
+        start:["Let's play.","Interesting.","Good luck.","Well met.","Let's begin."],
+        check:["Check.","Pressure.","Interesting.","Consider.","Yes."],
+        myCheck:["Check.","Progress.","Slowly.","Consider.","Yes."],
+        capture:["Material.","Good.","Expected.","Fine.","Yes."],
+        playerCapture:["Interesting choice.","Noted.","Fine.","Reasonable.","Hmm."],
+        win:["Good game.","Well played.","Interesting.","As expected.","GG."],
+        lose:["You were better today.","Respect.","Well played.","You earned it.","GG."],
+        draw:["A fair draw.","Balanced.","Well matched.","Fine.","Fair."],
+        mate:["Checkmate.","Well played.","Delivered.","As planned.","Yes."],
+        thinking:["Consider all options.","Interesting position.","Calculate.","Hmm.","Think."],
+        blunder:["Interesting.","A mistake.","Not ideal.","Hmm.","Noted."],
+        great:["Good move.","Interesting.","Precise.","Yes."],
+        taunt:["Interesting.","Consider.","Position matters.","Slowly.","Well played so far."]
       }
     },
-    {
-      id:'stock', name:'Stockfish', elo:3200, displayElo:3200, emoji:'🐟',
-      desc:'The engine. Inhuman.',
-      depth:5, random:0,
+    { id:'stock', name:'Stockfish', elo:3200, displayElo:3200, emoji:'🐟', desc:'The engine. Inhuman.', depth:5, random:0,
       comments:{
-        start:["Calculating...", "Engine online.", "...", "Initialize.", "Depth 5."],
-        check:["+2.34", "Check. Advantage: engine.", "Evaluation: positive.", "+1.85"],
-        myCheck:["+1.87", "Check. Eval: favorable.", "+2.10", "+3.02"],
-        capture:["Material: favorable.", "Evaluation increased.", "Optimal capture.", "+1.20"],
-        playerCapture:["Recalculating.", "Noted.", "Evaluation adjusted.", "Hmm."],
-        win:["Game over. Engine wins.", "Result: 1-0. Expected.", "Checkmate achieved.", "Confirmed."],
-        lose:["Resignation impossible. You won.", "Result: 0-1.", "Unexpected.", "Hmm."],
-        draw:["Draw. Eval 0.00.", "Equilibrium.", "Stalemate. Acceptable.", "0.00."],
-        mate:["Mate in N. Found.", "Checkmate. Confirmed.", "Game concluded.", "Mate."],
-        thinking:["Calculating...", "Depth 5...", "Searching...", "Evaluating...", "..."],
-        blunder:["Anomaly detected.", "Error.", "Miscalculation.", "Hmm."],
-        great:["Optimal move.", "Best found.", "Precise.", "Yes."],
-        taunt:["Calculating...", "Depth 5.", "Evaluation ongoing.", "...", "Engine."]
+        start:["Calculating...","Engine online.","...","Initialize.","Depth 5."],
+        check:["+2.34","Check. Advantage: engine.","Evaluation: positive.","+1.85"],
+        myCheck:["+1.87","Check. Eval: favorable.","+2.10","+3.02"],
+        capture:["Material: favorable.","Evaluation increased.","Optimal capture.","+1.20"],
+        playerCapture:["Recalculating.","Noted.","Evaluation adjusted.","Hmm."],
+        win:["Game over. Engine wins.","Result: 1-0. Expected.","Checkmate achieved.","Confirmed."],
+        lose:["Resignation impossible. You won.","Result: 0-1.","Unexpected.","Hmm."],
+        draw:["Draw. Eval 0.00.","Equilibrium.","Stalemate. Acceptable.","0.00."],
+        mate:["Mate in N. Found.","Checkmate. Confirmed.","Game concluded.","Mate."],
+        thinking:["Calculating...","Depth 5...","Searching...","Evaluating...","..."],
+        blunder:["Anomaly detected.","Error.","Miscalculation.","Hmm."],
+        great:["Optimal move.","Best found.","Precise.","Yes."],
+        taunt:["Calculating...","Depth 5.","Evaluation ongoing.","...","Engine."]
       }
     }
   ];
@@ -715,25 +672,45 @@
   const ECO = [
     ['e4',"King's Pawn"],['e4 e5','Open Game'],['e4 e5 Nf3',"King's Knight"],
     ['e4 e5 Nf3 Nc6','Open Game'],['e4 e5 Nf3 Nc6 Bb5','Ruy López'],
-    ['e4 e5 Nf3 Nc6 Bc4','Italian Game'],['e4 e5 Nf3 Nc6 d4','Scotch Game'],
-    ['e4 e5 Nf3 Nf6','Petrov Defense'],['e4 e5 Nc3','Vienna Game'],
-    ['e4 e5 f4',"King's Gambit"],['e4 c5','Sicilian Defense'],
-    ['e4 c5 Nf3 d6','Sicilian Defense'],['e4 c5 Nf3 Nc6','Sicilian: Old Sicilian'],
-    ['e4 c5 Nf3 e6','Sicilian: French Variation'],['e4 c5 Nc3','Sicilian: Closed'],
-    ['e4 e6','French Defense'],['e4 c6','Caro-Kann Defense'],
-    ['e4 d5','Scandinavian Defense'],['e4 Nf6','Alekhine Defense'],
-    ['e4 d6','Pirc Defense'],['e4 g6','Modern Defense'],['e4 Nc6','Nimzowitsch Defense'],
-    ['d4',"Queen's Pawn"],['d4 d5','Closed Game'],['d4 d5 c4',"Queen's Gambit"],
-    ['d4 d5 c4 e6',"Queen's Gambit Declined"],['d4 d5 c4 c6','Slav Defense'],
-    ['d4 d5 c4 dxc4',"Queen's Gambit Accepted"],['d4 d5 c4 Nf6','Marshall Defense'],
+    ['e4 e5 Nf3 Nc6 Bb5 a6','Ruy López: Morphy Defense'],
+    ['e4 e5 Nf3 Nc6 Bb5 a6 Ba4','Ruy López: Morphy'],
+    ['e4 e5 Nf3 Nc6 Bc4','Italian Game'],['e4 e5 Nf3 Nc6 Bc4 Bc5','Italian: Giuoco Piano'],
+    ['e4 e5 Nf3 Nc6 Bc4 Nf6','Italian: Two Knights'],
+    ['e4 e5 Nf3 Nc6 d4','Scotch Game'],['e4 e5 Nf3 Nc6 d4 exd4','Scotch: Exchange'],
+    ['e4 e5 Nf3 Nf6','Petrov Defense'],['e4 e5 Nf3 Nf6 Nxe5','Petrov: Classical'],
+    ['e4 e5 Nc3','Vienna Game'],['e4 e5 f4',"King's Gambit"],
+    ['e4 e5 f4 exf4',"King's Gambit Accepted"],
+    ['e4 c5','Sicilian Defense'],['e4 c5 Nf3 d6','Sicilian: Najdorf-ish'],
+    ['e4 c5 Nf3 Nc6','Sicilian: Old Sicilian'],
+    ['e4 c5 Nf3 Nc6 d4','Sicilian: Open'],
+    ['e4 c5 Nf3 Nc6 d4 cxd4 Nxd4','Sicilian: Open Main'],
+    ['e4 c5 Nf3 e6','Sicilian: French Variation'],
+    ['e4 c5 Nf3 e6 d4','Sicilian: French, Open'],
+    ['e4 c5 Nf3 d6 d4','Sicilian: Open'],
+    ['e4 c5 Nc3','Sicilian: Closed'],['e4 c5 c3','Sicilian: Alapin'],
+    ['e4 e6','French Defense'],['e4 e6 d4 d5','French: Main'],
+    ['e4 e6 d4 d5 Nc3','French: Paulsen'],
+    ['e4 c6','Caro-Kann Defense'],['e4 c6 d4 d5','Caro-Kann: Main'],
+    ['e4 c6 d4 d5 Nc3 dxe4','Caro-Kann: Classical'],
+    ['e4 d5','Scandinavian Defense'],['e4 d5 exd5','Scandinavian: Main'],
+    ['e4 Nf6','Alekhine Defense'],['e4 d6','Pirc Defense'],
+    ['e4 g6','Modern Defense'],['e4 Nc6','Nimzowitsch Defense'],
+    ['d4',"Queen's Pawn"],['d4 d5','Closed Game'],
+    ['d4 d5 c4',"Queen's Gambit"],['d4 d5 c4 e6',"Queen's Gambit Declined"],
+    ['d4 d5 c4 e6 Nc3','QGD: Main'],['d4 d5 c4 c6','Slav Defense'],
+    ['d4 d5 c4 dxc4',"Queen's Gambit Accepted"],
+    ['d4 d5 c4 Nf6','Marshall Defense'],['d4 d5 Nf3','Queen\'s Pawn: Zukertort'],
+    ['d4 d5 Bf4','London System'],
     ['d4 Nf6','Indian Defense'],['d4 Nf6 c4 e6','Indian Game'],
     ['d4 Nf6 c4 g6',"King's Indian Defense"],
+    ['d4 Nf6 c4 g6 Nc3 Bg7','KID: Classical Setup'],
     ['d4 Nf6 c4 e6 Nc3 Bb4','Nimzo-Indian Defense'],
     ['d4 Nf6 c4 e6 Nf3 b6',"Queen's Indian Defense"],
     ['d4 Nf6 c4 c5','Benoni Defense'],['d4 f5','Dutch Defense'],
     ['c4','English Opening'],['c4 e5','English: Reversed Sicilian'],
     ['c4 c5','English: Symmetrical'],['c4 Nf6','English: Anglo-Indian'],
-    ['Nf3','Réti Opening'],['Nf3 d5 c4','Réti Opening'],
+    ['c4 e6','English: Agincourt'],
+    ['Nf3','Réti Opening'],['Nf3 d5 c4','Réti Opening'],['Nf3 d5 g3',"King's Indian Attack"],
     ['g3','Benko Opening'],['b3','Nimzo-Larsen Attack'],
     ['b4','Sokolsky Opening'],['f4',"Bird's Opening"],
   ];
@@ -748,6 +725,19 @@
       }
     }
     return best ? best.name : null;
+  }
+
+  /* FIX: A line is book only if it matches an ECO entry EXACTLY or
+     is a strict prefix of an ECO entry. It must NOT be true just because
+     the line starts with some ECO prefix (that would flag all follow-ups). */
+  function isBookLine(sans) {
+    if (!sans || !sans.length) return false;
+    const line = sans.join(' ');
+    for (const [seq] of ECO) {
+      if (seq === line) return true;
+      if (seq.startsWith(line + ' ')) return true;
+    }
+    return false;
   }
 
   function parsePGN(pgn) {
@@ -871,13 +861,19 @@
       const played = moves[i];
       const playedMv = legal.find(x => x.from === played.from && x.to === played.to && (played.promo ? x.promo === played.promo : !x.promo));
       if (!playedMv) { out.push({ label: 'good', evalCp: 0 }); continue; }
-      if (inBook && !openingName(sans.slice(0, i + 1))) inBook = false;
+
+      // FIX: use isBookLine instead of !openingName — this checks whether the
+      // full line so far IS in the book (exact match or strict prefix of an ECO entry),
+      // not just whether it starts with a known opening prefix.
+      if (inBook && !isBookLine(sans.slice(0, i + 1))) inBook = false;
+
       const matBefore = materialFor(stB, mover);
       const stAfter = parseFen(fenBefore);
       makeMove(stAfter, playedMv);
       const playedEval = evalFor(stAfter, mover);
       const matAfter = materialFor(stAfter, mover);
       const sacrificed = matBefore - matAfter;
+
       const best = findBestMoveV2(fenBefore, { depth: 2, random: 0 });
       let bestEval = playedEval, playedIsBest = false;
       if (best) {
@@ -887,6 +883,7 @@
         if (bestMv) { makeMove(stBest, bestMv); bestEval = evalFor(stBest, mover); }
       }
       const delta = bestEval - playedEval;
+
       let label = 'good';
       if (inBook) label = 'book';
       else if (sacrificed >= 200 && playedEval > -100) label = 'brilliant';
@@ -896,6 +893,7 @@
       else if (delta < 180) label = 'inaccuracy';
       else if (delta < 350) label = 'mistake';
       else label = 'blunder';
+
       out.push({ label, evalCp: playedEval });
     }
     return out;
@@ -906,7 +904,7 @@
     inCheck, isAttacked, status, moveToSan, findBestMove, quickEval,
     bestMoveForAnalysis, sqToName, nameToSq, movesToPgn, evaluate, insufficientMaterial,
     BOTS, ECO, LABELS,
-    materialFor, openingName, parsePGN,
+    materialFor, openingName, isBookLine, parsePGN,
     findBestMoveV2, analyzeGame, evalFor, fenAfterMove,
   };
 })(window);
